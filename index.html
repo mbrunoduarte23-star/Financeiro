@@ -121,9 +121,7 @@
         </div>
       </section>
 
-      <section id="projecao" class="section">
-        <div id="projecaoGrid" class="grid grid-2"></div>
-      </section>
+      <section id="projecao" class="section"><div id="projecaoGrid" class="grid grid-2"></div></section>
     </main>
   </div>
 
@@ -138,106 +136,202 @@ const SUPABASE_ANON_KEY = "sb_publishable_G2cKjcrlG7BomyQJCeCChA_px2mKsxX";
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const state = { entradas: [], saidas: [], contas: [], parcelas: [] };
-const money = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const parseMoney = v => Number(String(v || '0').replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0;
+const money = v => `R$ ${Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+const parseMoney = v => Number(String(v||'0').replace(/[^0-9,.-]/g,'').replace(',','.')) || 0;
 const byId = id => document.getElementById(id);
+
+// nav
 const navButtons = document.querySelectorAll('.nav button');
-const sections = document.querySelectorAll('.section');
-navButtons.forEach(btn => btn.addEventListener('click', () => { navButtons.forEach(b => b.classList.remove('active')); sections.forEach(s => s.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.section).classList.add('active'); }));
+const sections   = document.querySelectorAll('.section');
+navButtons.forEach(btn => btn.addEventListener('click', () => {
+  navButtons.forEach(b => b.classList.remove('active'));
+  sections.forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  byId(btn.dataset.section).classList.add('active');
+}));
+
+// modals
 const openMap = {entrada:'modalEntrada', saida:'modalSaida', conta:'modalConta', editarConta:'modalEditarConta'};
 document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => {
   const modalId = openMap[btn.dataset.open];
   if (modalId === 'modalEditarConta') {
-    const sel = document.getElementById('editContaNome');
+    const sel = byId('editContaNome');
     sel.innerHTML = state.contas.length
       ? state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
-      : '<option value="">Nenhuma conta cadastrada</option>';
+      : '<option value="">Nenhuma conta — sincronize primeiro</option>';
   }
   byId(modalId).classList.add('show');
 }));
 document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal-backdrop').classList.remove('show')));
 document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
-function fillDate(id){ const el = byId(id); const d = new Date(); const yyyy = 2026; const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); el.value = `${yyyy}-${mm}-${dd}`; }
+
+// dates
+function fillDate(id){ const el=byId(id); if(!el) return; const d=new Date(); el.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 fillDate('dataEntrada'); fillDate('dataSaida');
+
+// ── render projeção ──────────────────────────────────────────────────────────
 function renderProjecao() {
   const grid = byId('projecaoGrid');
   if (!grid) return;
   const parceladas = state.contas.filter(c => Number(c.total_parcelas) > 0);
   if (!parceladas.length) {
-    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="muted">Nenhuma conta parcelada cadastrada ainda. Cadastre uma conta com total de parcelas.</div></div>';
+    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="muted">Nenhuma conta parcelada encontrada. Cadastre uma conta com total de parcelas preenchido.</div></div>';
     return;
   }
   grid.innerHTML = parceladas.map(c => {
-    const atual = Number(c.parcela_atual || 0);
-    const total = Number(c.total_parcelas || 0);
+    const atual  = Number(c.parcela_atual  || 0);
+    const total  = Number(c.total_parcelas || 0);
     const faltam = Math.max(total - atual, 0);
-    const pct = total ? Math.min((atual / total) * 100, 100) : 0;
+    const pct    = total ? Math.min((atual / total) * 100, 100) : 0;
     const restante = parseMoney(c.valor_atual || 0) * faltam;
-    const agora = new Date();
-    const mesTermino = new Date(agora.getFullYear(), agora.getMonth() + faltam, 1);
+    const agora  = new Date();
+    const mesFim = new Date(agora.getFullYear(), agora.getMonth() + faltam, 1);
     const termino = faltam > 0
-      ? mesTermino.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+      ? mesFim.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})
       : 'Quitada ✓';
-    const statusClass = c.status === 'Paga' ? 'pos' : c.status === 'Parcial' ? '' : 'neg';
-    return \`<div class="card">
-      <h3 style="margin-top:0;">\${c.nome}</h3>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-        <div class="pill">\${atual} / \${total} parcelas</div>
-        <div class="pill \${statusClass}" style="margin-left:auto;">\${c.status || 'Aberta'}</div>
+    const statusPill = c.status === 'Paga' ? 'style="background:var(--pos)"' : c.status === 'Parcial' ? 'style="background:#b8860b"' : '';
+    return `<div class="card">
+      <h3 style="margin-top:0;">${c.nome}</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <div class="pill">${atual} / ${total} parcelas</div>
+        <div class="pill" ${statusPill}>${c.status || 'Aberta'}</div>
       </div>
-      <div class="metric">Faltam \${faltam}</div>
-      <div class="progress" style="margin:10px 0;"><span style="width:\${pct}%"></span></div>
+      <div class="metric">Faltam ${faltam}</div>
+      <div class="progress" style="margin:10px 0;"><span style="width:${pct}%"></span></div>
       <div class="list" style="margin-top:14px;">
-        <div class="row"><div>Valor da parcela</div><div>\${money(c.valor_atual || 0)}</div></div>
-        <div class="row"><div>Valor restante estimado</div><div>\${money(restante)}</div></div>
-        <div class="row"><div>Vencimento</div><div>Dia \${c.vencimento_dia || '—'}</div></div>
-        <div class="row"><div>Previsão de término</div><div>\${termino}</div></div>
+        <div class="row"><div>Valor da parcela</div><div>${money(c.valor_atual||0)}</div></div>
+        <div class="row"><div>Valor restante estimado</div><div>${money(restante)}</div></div>
+        <div class="row"><div>Vencimento</div><div>Dia ${c.vencimento_dia || '—'}</div></div>
+        <div class="row"><div>Previsão de término</div><div>${termino}</div></div>
       </div>
-    </div>\`;
+    </div>`;
   }).join('');
 }
-function render(){
+
+// ── render principal ─────────────────────────────────────────────────────────
+function render() {
   const entradaTotal = state.entradas.reduce((a,b)=>a+parseMoney(b.valor),0);
-  const saidaTotal = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
-  const saldo = entradaTotal - saidaTotal;
-  const uber = state.entradas.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const d99 = state.entradas.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const ifood = state.entradas.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const receber = state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto').reduce((a,b)=>a+parseMoney(b.valor),0);
-  [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]].forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
+  const saidaTotal   = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const saldo  = entradaTotal - saidaTotal;
+  const uber   = state.entradas.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const d99    = state.entradas.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const ifood  = state.entradas.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const receber= state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto').reduce((a,b)=>a+parseMoney(b.valor),0);
+  [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]]
+    .forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
+
   const mov = byId('movRecentes');
-  if (mov) mov.innerHTML = [...state.entradas.slice(0,3).map(x => `<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status || ''}</div></div><div class="pos">+ ${money(parseMoney(x.valor))}</div></div>`), ...state.saidas.slice(0,3).map(x => `<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada || ''}</div></div><div class="neg">- ${money(parseMoney(x.valor))}</div></div>`)].join('') || '<div class="muted">Sem lançamentos ainda.</div>';
+  if (mov) mov.innerHTML = [
+    ...state.entradas.slice(0,3).map(x=>`<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div></div><div class="pos">+ ${money(parseMoney(x.valor))}</div></div>`),
+    ...state.saidas.slice(0,3).map(x=>`<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div></div><div class="neg">- ${money(parseMoney(x.valor))}</div></div>`)
+  ].join('') || '<div class="muted">Sem lançamentos ainda.</div>';
+
   const rep = byId('repasses');
-  if (rep) rep.innerHTML = `<table><thead><tr><th>Origem</th><th>Dia</th><th>Valor</th></tr></thead><tbody><tr><td>Uber</td><td>Segunda</td><td>${money(uber)}</td></tr><tr><td>99</td><td>Quarta</td><td>${money(d99)}</td></tr><tr><td>iFood</td><td>Quarta</td><td>${money(ifood)}</td></tr><tr><td><strong>Total</strong></td><td>Semana</td><td><strong>${money(receber)}</strong></td></tr></tbody></table>`;
+  if (rep) rep.innerHTML = `<table><thead><tr><th>Origem</th><th>Dia</th><th>Valor</th></tr></thead><tbody>
+    <tr><td>Uber</td><td>Segunda</td><td>${money(uber)}</td></tr>
+    <tr><td>99</td><td>Quarta</td><td>${money(d99)}</td></tr>
+    <tr><td>iFood</td><td>Quarta</td><td>${money(ifood)}</td></tr>
+    <tr><td><strong>Total</strong></td><td>Semana</td><td><strong>${money(receber)}</strong></td></tr>
+    </tbody></table>`;
+
   const cl = byId('contasList');
-  const extras = state.contas.filter(c => !['Parcela da moto','Cartão mãe'].includes(c.nome));
-  if (cl) cl.innerHTML = extras.length ? extras.map(c => `<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia || '-'} • ${c.tipo || ''}</div></div>`).join('') : '<div class="muted">Sem contas ainda.</div>';
+  const fixas = state.contas.filter(c => !Number(c.total_parcelas));
+  const parc  = state.contas.filter(c =>  Number(c.total_parcelas) > 0);
+  if (cl) {
+    const fixasHtml = fixas.length
+      ? fixas.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia||'-'} • ${c.tipo||'fixa'}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('')
+      : '';
+    const parcHtml = parc.length
+      ? parc.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Parcelada • ${c.parcela_atual||0}/${c.total_parcelas||0}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('')
+      : '';
+    cl.innerHTML = (fixasHtml + parcHtml) || '<div class="muted">Sem contas ainda.</div>';
+  }
+
   renderProjecao();
 }
-async function reloadAll(){ const [e1,s1,c1,p1] = await Promise.all([sb.from('entradas').select('*').order('id',{ascending:false}), sb.from('saidas').select('*').order('id',{ascending:false}), sb.from('contas_fixas').select('*').order('id',{ascending:false}), sb.from('parcelas').select('*').order('id',{ascending:false})]); state.entradas = e1.data || []; state.saidas = s1.data || []; state.contas = c1.data || []; state.parcelas = p1.data || []; render(); }
-async function saveEnter(modalId, table, payload){ const { error } = await sb.from(table).insert(payload); if (!error) { byId(modalId).classList.remove('show'); await reloadAll(); } else alert('Erro ao salvar.'); }
-byId('btnSync').addEventListener('click', async () => { try { await reloadAll(); alert('Conexão com Supabase OK.'); } catch (e) { console.error(e); alert('Erro ao conectar ao Supabase.'); } });
-byId('themeToggle').addEventListener('click', () => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
-byId('modalEntrada').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalEntrada'); const [o,s] = m.querySelectorAll('select'); await saveEnter('modalEntrada','entradas',{ origem:o.value, valor:parseMoney(m.querySelector('input').value), data_lancamento:m.querySelector('input[type="date"]').value || null, status:s.value, observacao:m.querySelector('textarea').value }); });
-byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalSaida'); const [c,cv] = m.querySelectorAll('select'); await saveEnter('modalSaida','saidas',{ categoria:c.value, conta_vinculada:cv.value, valor:parseMoney(m.querySelector('input').value), data_lancamento:m.querySelector('input[type="date"]').value || null, observacao:m.querySelector('textarea').value }); });
-byId('modalConta').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalConta'); const inputs = m.querySelectorAll('input'); const tipo = m.querySelector('select').value; await saveEnter('modalConta','contas_fixas',{ nome:inputs[0].value, tipo, valor_atual:parseMoney(inputs[1].value), vencimento_dia:Number(inputs[2].value||0), parcela_atual: inputs[3].value ? Number(inputs[3].value) : null, total_parcelas: inputs[4].value ? Number(inputs[4].value) : null, status:'Aberta' }); });
-document.getElementById('btnSalvarConta').addEventListener('click', async () => {
-  const sel = document.getElementById('editContaNome');
-  const contaId = sel.value;
-  if (!contaId) return alert('Selecione uma conta primeiro.');
-  const valor = document.getElementById('editValor').value;
-  const venc = document.getElementById('editVenc').value;
-  const parcelaAtual = document.getElementById('editParcelaAtual').value;
-  const totalParcelas = document.getElementById('editTotalParcelas').value;
-  const status = document.getElementById('editStatus').value;
-  const payload = { status };
-  if (valor) payload.valor_atual = parseMoney(valor);
-  if (venc) payload.vencimento_dia = Number(venc);
-  if (parcelaAtual) payload.parcela_atual = Number(parcelaAtual);
-  if (totalParcelas) payload.total_parcelas = Number(totalParcelas);
-  const { error } = await sb.from('contas_fixas').update(payload).eq('id', Number(contaId));
-  if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); } else { console.error(error); alert('Erro ao atualizar conta: ' + error.message); }
+
+// ── reload ───────────────────────────────────────────────────────────────────
+async function reloadAll() {
+  const [e1,s1,c1,p1] = await Promise.all([
+    sb.from('entradas').select('*').order('id',{ascending:false}),
+    sb.from('saidas').select('*').order('id',{ascending:false}),
+    sb.from('contas_fixas').select('*').order('id',{ascending:false}),
+    sb.from('parcelas').select('*').order('id',{ascending:false})
+  ]);
+  state.entradas = e1.data||[]; state.saidas=s1.data||[]; state.contas=c1.data||[]; state.parcelas=p1.data||[];
+  render();
+}
+
+async function saveEnter(modalId, table, payload) {
+  const { error } = await sb.from(table).insert(payload);
+  if (!error) { byId(modalId).classList.remove('show'); await reloadAll(); }
+  else { console.error(error); alert('Erro ao salvar: ' + error.message); }
+}
+
+// ── listeners ────────────────────────────────────────────────────────────────
+byId('btnSync').addEventListener('click', async () => {
+  try { await reloadAll(); alert('Conexão com Supabase OK.'); }
+  catch(e) { console.error(e); alert('Erro ao conectar ao Supabase.'); }
 });
+
+byId('themeToggle').addEventListener('click', () => {
+  document.documentElement.setAttribute('data-theme',
+    document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+});
+
+byId('modalEntrada').querySelector('.btn-primary').addEventListener('click', async () => {
+  const m = byId('modalEntrada');
+  const [o,s] = m.querySelectorAll('select');
+  await saveEnter('modalEntrada','entradas',{
+    origem:o.value, valor:parseMoney(m.querySelector('input').value),
+    data_lancamento:m.querySelector('input[type="date"]').value||null,
+    status:s.value, observacao:m.querySelector('textarea').value
+  });
+});
+
+byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async () => {
+  const m = byId('modalSaida');
+  const [c,cv] = m.querySelectorAll('select');
+  await saveEnter('modalSaida','saidas',{
+    categoria:c.value, conta_vinculada:cv.value,
+    valor:parseMoney(m.querySelector('input').value),
+    data_lancamento:m.querySelector('input[type="date"]').value||null,
+    observacao:m.querySelector('textarea').value
+  });
+});
+
+byId('modalConta').querySelector('.btn-primary').addEventListener('click', async () => {
+  const m = byId('modalConta');
+  const inputs = m.querySelectorAll('input');
+  const tipo = m.querySelector('select').value;
+  await saveEnter('modalConta','contas_fixas',{
+    nome:inputs[0].value, tipo,
+    valor_atual:parseMoney(inputs[1].value),
+    vencimento_dia:Number(inputs[2].value||0),
+    parcela_atual:  inputs[3].value ? Number(inputs[3].value) : null,
+    total_parcelas: inputs[4].value ? Number(inputs[4].value) : null,
+    status:'Aberta'
+  });
+});
+
+byId('btnSalvarConta').addEventListener('click', async () => {
+  const contaId = byId('editContaNome').value;
+  if (!contaId) return alert('Selecione uma conta primeiro.');
+  const valor        = byId('editValor').value;
+  const venc         = byId('editVenc').value;
+  const parcelaAtual = byId('editParcelaAtual').value;
+  const totalParc    = byId('editTotalParcelas').value;
+  const status       = byId('editStatus').value;
+  const payload = { status };
+  if (valor)        payload.valor_atual    = parseMoney(valor);
+  if (venc)         payload.vencimento_dia = Number(venc);
+  if (parcelaAtual) payload.parcela_atual  = Number(parcelaAtual);
+  if (totalParc)    payload.total_parcelas = Number(totalParc);
+  const { error } = await sb.from('contas_fixas').update(payload).eq('id', Number(contaId));
+  if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); }
+  else { console.error(error); alert('Erro ao atualizar: ' + error.message); }
+});
+
 reloadAll().catch(console.error);
 </script>
 </body>
