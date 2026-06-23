@@ -153,7 +153,7 @@
   <div class="modal-backdrop" id="modalEntrada"><div class="modal"><div class="modal-head"><h3>Nova entrada</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Origem</label><select><option>Uber</option><option>99</option><option>iFood</option><option>Estágio</option><option>Outro</option></select></div><div class="field"><label>Status</label><select><option>Previsto</option><option>Recebido</option></select></div><div class="field"><label>Valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Data</label><input type="date" id="dataEntrada"></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: repasse da semana..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
   <div class="modal-backdrop" id="modalSaida"><div class="modal"><div class="modal-head"><h3>Nova saída</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Categoria</label><select><option>Moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option><option>Alimentação</option><option>Combustível</option><option>Lazer</option><option>Outro</option></select></div><div class="field"><label>Conta vinculada</label><select><option>Nenhuma</option><option>Parcela da moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option></select></div><div class="field"><label>Valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Data</label><input type="date" id="dataSaida"></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: gasolina, mercado..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
   <div class="modal-backdrop" id="modalConta"><div class="modal"><div class="modal-head"><h3>Nova conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Nome da conta</label><input placeholder="Ex.: faculdade"></div><div class="field"><label>Tipo</label><select><option>Fixa</option><option>Variável</option><option>Parcelada</option></select></div><div class="field"><label>Valor atual</label><input placeholder="R$ 0,00"></div><div class="field"><label>Vencimento</label><input type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input placeholder="Ex.: 8"></div><div class="field"><label>Total de parcelas</label><input placeholder="Ex.: 12"></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
-  <div class="modal-backdrop" id="modalEditarConta"><div class="modal"><div class="modal-head"><h3>Editar conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field full"><label>Conta</label><select id="editContaNome"><option>Parcela da moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option></select></div><div class="field"><label>Novo valor (R$)</label><input id="editValor" placeholder="Ex.: 857,00"></div><div class="field"><label>Novo vencimento (dia)</label><input id="editVenc" type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input id="editParcelaAtual" type="number" placeholder="Ex.: 9"></div><div class="field"><label>Total de parcelas</label><input id="editTotalParcelas" type="number" placeholder="Ex.: 18"></div><div class="field"><label>Status</label><select id="editStatus"><option>Aberta</option><option>Parcial</option><option>Paga</option></select></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: reajuste..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarConta">Salvar alterações</button></div></div></div>
+  <div class="modal-backdrop" id="modalEditarConta"><div class="modal"><div class="modal-head"><h3>Editar conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field full"><label>Conta</label><select id="editContaNome"><option value="">Carregando...</option></select></div><div class="field"><label>Novo valor (R$)</label><input id="editValor" placeholder="Ex.: 857,00"></div><div class="field"><label>Novo vencimento (dia)</label><input id="editVenc" type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input id="editParcelaAtual" type="number" placeholder="Ex.: 9"></div><div class="field"><label>Total de parcelas</label><input id="editTotalParcelas" type="number" placeholder="Ex.: 18"></div><div class="field"><label>Status</label><select id="editStatus"><option>Aberta</option><option>Parcial</option><option>Paga</option></select></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: reajuste..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarConta">Salvar alterações</button></div></div></div>
 
   <script>
 const SUPABASE_URL = "https://zmhpmnhgvydscmcqehic.supabase.co";
@@ -168,7 +168,16 @@ const navButtons = document.querySelectorAll('.nav button');
 const sections = document.querySelectorAll('.section');
 navButtons.forEach(btn => btn.addEventListener('click', () => { navButtons.forEach(b => b.classList.remove('active')); sections.forEach(s => s.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.section).classList.add('active'); }));
 const openMap = {entrada:'modalEntrada', saida:'modalSaida', conta:'modalConta', editarConta:'modalEditarConta'};
-document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => byId(openMap[btn.dataset.open]).classList.add('show')));
+document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => {
+  const modalId = openMap[btn.dataset.open];
+  if (modalId === 'modalEditarConta') {
+    const sel = document.getElementById('editContaNome');
+    sel.innerHTML = state.contas.length
+      ? state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
+      : '<option value="">Nenhuma conta cadastrada</option>';
+  }
+  byId(modalId).classList.add('show');
+}));
 document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal-backdrop').classList.remove('show')));
 document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
 function fillDate(id){ const el = byId(id); const d = new Date(); const yyyy = 2026; const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); el.value = `${yyyy}-${mm}-${dd}`; }
@@ -201,21 +210,20 @@ byId('modalEntrada').querySelector('.btn-primary').addEventListener('click', asy
 byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalSaida'); const [c,cv] = m.querySelectorAll('select'); await saveEnter('modalSaida','saidas',{ categoria:c.value, conta_vinculada:cv.value, valor:parseMoney(m.querySelector('input').value), data_lancamento:m.querySelector('input[type="date"]').value || null, observacao:m.querySelector('textarea').value }); });
 byId('modalConta').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalConta'); const inputs = m.querySelectorAll('input'); const tipo = m.querySelector('select').value; await saveEnter('modalConta','contas_fixas',{ nome:inputs[0].value, tipo, valor_atual:parseMoney(inputs[1].value), vencimento_dia:Number(inputs[2].value||0), parcela_atual: inputs[3].value ? Number(inputs[3].value) : null, total_parcelas: inputs[4].value ? Number(inputs[4].value) : null, status:'Aberta' }); });
 document.getElementById('btnSalvarConta').addEventListener('click', async () => {
-  const nome = document.getElementById('editContaNome').value;
+  const sel = document.getElementById('editContaNome');
+  const contaId = sel.value;
+  if (!contaId) return alert('Selecione uma conta primeiro.');
   const valor = document.getElementById('editValor').value;
   const venc = document.getElementById('editVenc').value;
   const parcelaAtual = document.getElementById('editParcelaAtual').value;
   const totalParcelas = document.getElementById('editTotalParcelas').value;
   const status = document.getElementById('editStatus').value;
-  const selected = state.contas.find(c => c.nome === nome);
-  if (!selected) return alert('Conta não encontrada. Sincronize primeiro.');
-  const payload = {};
+  const payload = { status };
   if (valor) payload.valor_atual = parseMoney(valor);
   if (venc) payload.vencimento_dia = Number(venc);
   if (parcelaAtual) payload.parcela_atual = Number(parcelaAtual);
   if (totalParcelas) payload.total_parcelas = Number(totalParcelas);
-  payload.status = status;
-  const { error } = await sb.from('contas_fixas').update(payload).eq('id', selected.id);
+  const { error } = await sb.from('contas_fixas').update(payload).eq('id', Number(contaId));
   if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); } else { console.error(error); alert('Erro ao atualizar conta: ' + error.message); }
 });
 reloadAll().catch(console.error);
