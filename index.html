@@ -76,25 +76,20 @@
 
       <section id="dashboard" class="section active">
         <div class="grid grid-5">
-          <div class="card"><div class="pill">Saldo geral</div><div class="metric">R$ 0,00</div><div class="muted">Disponível</div></div>
-          <div class="card"><div class="pill">Uber</div><div class="metric">R$ 0,00</div><div class="muted">Repasse segunda</div></div>
-          <div class="card"><div class="pill">99</div><div class="metric">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
-          <div class="card"><div class="pill">iFood</div><div class="metric">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
-          <div class="card"><div class="pill">A receber</div><div class="metric">R$ 0,00</div><div class="muted">Total da semana</div></div>
+          <div class="card"><div class="pill">Saldo geral</div><div class="metric" id="saldoGeral">R$ 0,00</div><div class="muted">Disponível</div></div>
+          <div class="card"><div class="pill">Uber</div><div class="metric" id="saldoUber">R$ 0,00</div><div class="muted">Repasse segunda</div></div>
+          <div class="card"><div class="pill">99</div><div class="metric" id="saldo99">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
+          <div class="card"><div class="pill">iFood</div><div class="metric" id="saldoIfood">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
+          <div class="card"><div class="pill">A receber</div><div class="metric" id="saldoReceber">R$ 0,00</div><div class="muted">Total da semana</div></div>
         </div>
         <div class="grid grid-2" style="margin-top:16px;">
           <div class="card">
             <h3 style="margin-top:0;">Movimentações recentes</h3>
-            <div class="list">
-              <div class="row"><div><strong>Entrada iFood</strong><div class="muted">Previsto • quarta</div></div><div class="pos">+ R$ 0,00</div></div>
-              <div class="row"><div><strong>Saída combustível</strong><div class="muted">Hoje • moto</div></div><div class="neg">- R$ 0,00</div></div>
-              <div class="row"><div><strong>Entrada estágio</strong><div class="muted">Recebido • mensal</div></div><div class="pos">+ R$ 0,00</div></div>
-              <div class="row"><div><strong>Saída faculdade</strong><div class="muted">Conta fixa</div></div><div class="neg">- R$ 0,00</div></div>
-            </div>
+            <div class="list" id="movRecentes"></div>
           </div>
           <div class="card">
             <h3 style="margin-top:0;">Próximos repasses</h3>
-            <table>
+            <div id="repasses"><table>
               <thead><tr><th>Origem</th><th>Dia</th><th>Valor</th></tr></thead>
               <tbody>
                 <tr><td>Uber</td><td>Segunda</td><td>R$ 0,00</td></tr>
@@ -102,7 +97,7 @@
                 <tr><td>iFood</td><td>Quarta</td><td>R$ 0,00</td></tr>
                 <tr><td><strong>Total</strong></td><td>Semana</td><td><strong>R$ 0,00</strong></td></tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
         <div class="card" style="margin-top:16px;">
@@ -116,7 +111,7 @@
       </section>
 
       <section id="contas" class="section">
-        <div class="grid grid-3">
+        <div class="grid grid-3" id="contasList">
           <div class="card"><h3>Internet casa</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 10 • fixa</div></div>
           <div class="card"><h3>Internet celular</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 10 • variável</div></div>
           <div class="card"><h3>Faculdade</h3><div class="metric">R$ 160,00</div><div class="muted">Vence dia 25 • fixa</div></div>
@@ -129,7 +124,7 @@
       <section id="projecao" class="section">
         <div class="grid grid-2">
           <div class="card">
-            <h3 style="margin-top:0;">Parcela da moto</h3>
+            <h3 style="margin-top:0;">Parcela da moto</h3><div id="projMoto"></div>
             <div class="pill">0 / 0 parcelas</div>
             <div class="metric">Faltam 0</div>
             <div class="progress"><span style="width:50%"></span></div>
@@ -140,7 +135,7 @@
             </div>
           </div>
           <div class="card">
-            <h3 style="margin-top:0;">Cartão mãe</h3>
+            <h3 style="margin-top:0;">Cartão mãe</h3><div id="projMae"></div>
             <div class="pill">0 / 0 parcelas</div>
             <div class="metric">Faltam 0</div>
             <div class="progress"><span style="width:66.6%"></span></div>
@@ -161,41 +156,51 @@
   <div class="modal-backdrop" id="modalEditarConta"><div class="modal"><div class="modal-head"><h3>Editar conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Conta</label><select><option>Parcela da moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option></select></div><div class="field"><label>Novo valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Novo vencimento</label><input type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Status</label><select><option>Aberta</option><option>Parcial</option><option>Paga</option></select></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: reajuste..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Salvar alterações</button></div></div></div>
 
   <script>
-    const SUPABASE_URL = "https://zmhpmnhgvydscmcqehic.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_G2cKjcrlG7BomyQJCeCChA_px2mKsxX";
-    const { createClient } = supabase;
-    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const navButtons = document.querySelectorAll('.nav button');
-    const sections = document.querySelectorAll('.section');
-    navButtons.forEach(btn => btn.addEventListener('click', () => { navButtons.forEach(b => b.classList.remove('active')); sections.forEach(s => s.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.section).classList.add('active'); }));
-
-    const map = {entrada:'modalEntrada', saida:'modalSaida', conta:'modalConta', editarConta:'modalEditarConta'};
-    document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => document.getElementById(map[btn.dataset.open]).classList.add('show')));
-    document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal-backdrop').classList.remove('show')));
-    document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
-
-    const fixDate = (id) => { const el = document.getElementById(id); const t = new Date(); const yyyy = 2026; const mm = String(t.getMonth()+1).padStart(2,'0'); const dd = String(t.getDate()).padStart(2,'0'); el.value = `${yyyy}-${mm}-${dd}`; el.min = `${yyyy}-01-01`; el.max = `${yyyy}-12-31`; };
-    fixDate('dataEntrada'); fixDate('dataSaida');
-
-    document.getElementById('themeToggle').addEventListener('click', () => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
-    async function reloadAll(){
-      const [e1,s1,c1,p1] = await Promise.all([
-        sb.from('entradas').select('*').order('id',{ascending:false}).limit(10),
-        sb.from('saidas').select('*').order('id',{ascending:false}).limit(10),
-        sb.from('contas_fixas').select('*').order('id',{ascending:false}).limit(10),
-        sb.from('parcelas').select('*').order('id',{ascending:false}).limit(10)
-      ]);
-      window.__latest = {entradas:e1.data||[], saidas:s1.data||[], contas:c1.data||[], parcelas:p1.data||[]};
-      console.log(window.__latest);
-    }
-    document.getElementById('btnSync').addEventListener('click', async () => { try { await reloadAll(); alert('Conexão com Supabase OK.'); } catch (e) { console.error(e); alert('Erro ao conectar ao Supabase.'); } });
-
-    const readMoney = v => Number(String(v || '0').replace(/[^0-9,.-]/g,'').replace(',', '.')) || 0;
-    document.querySelector('#modalEntrada .btn-primary').addEventListener('click', async () => { const m = document.getElementById('modalEntrada'); const [o,s] = m.querySelectorAll('select'); const v = readMoney(m.querySelector('input').value); const d = m.querySelector('input[type="date"]').value; const obs = m.querySelector('textarea').value; const { error } = await sb.from('entradas').insert({ origem:o.value, valor:v, data_lancamento:d || null, status:s.value, observacao:obs }); if (!error) { alert('Entrada adicionada.'); m.classList.remove('show'); await reloadAll(); location.reload(); } else alert('Erro ao salvar entrada.'); });
-    document.querySelector('#modalSaida .btn-primary').addEventListener('click', async () => { const m = document.getElementById('modalSaida'); const [c,cv] = m.querySelectorAll('select'); const v = readMoney(m.querySelector('input').value); const d = m.querySelector('input[type="date"]').value; const obs = m.querySelector('textarea').value; const { error } = await sb.from('saidas').insert({ categoria:c.value, conta_vinculada:cv.value, valor:v, data_lancamento:d || null, observacao:obs }); if (!error) { alert('Saída adicionada.'); m.classList.remove('show'); await reloadAll(); location.reload(); } else alert('Erro ao salvar saída.'); });
-    document.querySelector('#modalConta .btn-primary').addEventListener('click', async () => { const m = document.getElementById('modalConta'); const inputs = m.querySelectorAll('input'); const tipo = m.querySelector('select').value; const { error } = await sb.from('contas_fixas').insert({ nome:inputs[0].value, tipo, valor_atual:readMoney(inputs[1].value), vencimento_dia:Number(inputs[2].value||0), parcela_atual: inputs[3].value ? Number(inputs[3].value) : null, total_parcelas: inputs[4].value ? Number(inputs[4].value) : null, status:'Aberta' }); if (!error) { alert('Conta adicionada.'); m.classList.remove('show'); await reloadAll(); location.reload(); } else alert('Erro ao salvar conta.'); });
-    document.querySelector('#modalEditarConta .btn-primary').addEventListener('click', async () => { const m = document.getElementById('modalEditarConta'); const [conta, valor, venc, status] = m.querySelectorAll('select, input'); const { error } = await sb.from('contas_fixas').update({ valor_atual:readMoney(valor.value), vencimento_dia:Number(venc.value||0), status:status.value }).eq('nome', conta.value); if (!error) { alert('Conta atualizada.'); m.classList.remove('show'); await reloadAll(); location.reload(); } else alert('Erro ao atualizar conta.'); });
-  </script>
+const SUPABASE_URL = "https://zmhpmnhgvydscmcqehic.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_G2cKjcrlG7BomyQJCeCChA_px2mKsxX";
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const state = { entradas: [], saidas: [], contas: [], parcelas: [] };
+const money = v => `R$ ${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const parseMoney = v => Number(String(v || '0').replace(/[^0-9,.-]/g, '').replace(',', '.')) || 0;
+const byId = id => document.getElementById(id);
+const navButtons = document.querySelectorAll('.nav button');
+const sections = document.querySelectorAll('.section');
+navButtons.forEach(btn => btn.addEventListener('click', () => { navButtons.forEach(b => b.classList.remove('active')); sections.forEach(s => s.classList.remove('active')); btn.classList.add('active'); byId(btn.dataset.section).classList.add('active'); }));
+const openMap = {entrada:'modalEntrada', saida:'modalSaida', conta:'modalConta', editarConta:'modalEditarConta'};
+document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => byId(openMap[btn.dataset.open]).classList.add('show')));
+document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal-backdrop').classList.remove('show')));
+document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
+function fillDate(id){ const el = byId(id); const d = new Date(); const yyyy = 2026; const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); el.value = `${yyyy}-${mm}-${dd}`; }
+fillDate('dataEntrada'); fillDate('dataSaida');
+function render(){
+  const entradaTotal = state.entradas.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const saidaTotal = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const saldo = entradaTotal - saidaTotal;
+  const uber = state.entradas.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const d99 = state.entradas.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const ifood = state.entradas.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const receber = state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto').reduce((a,b)=>a+parseMoney(b.valor),0);
+  [['saldoGeral',saldo],['saldoUber,',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]].forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
+  const mov = byId('movRecentes');
+  if (mov) mov.innerHTML = [...state.entradas.slice(0,2).map(x => `<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status || ''}</div></div><div class="pos">+ ${money(parseMoney(x.valor))}</div></div>`), ...state.saidas.slice(0,2).map(x => `<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada || ''}</div></div><div class="neg">- ${money(parseMoney(x.valor))}</div></div>`)].join('') || '<div class="muted">Sem lançamentos ainda.</div>';
+  const rep = byId('repasses');
+  if (rep) rep.innerHTML = `<table><thead><tr><th>Origem</th><th>Dia</th><th>Valor</th></tr></thead><tbody><tr><td>Uber</td><td>Segunda</td><td>${money(uber)}</td></tr><tr><td>99</td><td>Quarta</td><td>${money(d99)}</td></tr><tr><td>iFood</td><td>Quarta</td><td>${money(ifood)}</td></tr><tr><td><strong>Total</strong></td><td>Semana</td><td><strong>${money(receber)}</strong></td></tr></tbody></table>`;
+  const contas = byId('contasList');
+  if (contas) contas.innerHTML = state.contas.length ? state.contas.map(c => `<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia || '-'} • ${c.tipo || ''}</div></div>`).join('') : '<div class="muted">Sem contas ainda.</div>';
+  const moto = state.contas.find(c => c.nome === 'Parcela da moto') || {};
+  const mae = state.contas.find(c => c.nome === 'Cartão mãe') || {};
+  const setProj = (id, c) => { const root = byId(id); if (!root) return; const atual = c.parcela_atual || 0; const total = c.total_parcelas || 0; const faltam = Math.max(total - atual, 0); const pct = total ? (atual/total)*100 : 0; const restante = Math.max((c.valor_atual || 0) * faltam, 0); root.innerHTML = `<div class="pill">${atual} / ${total} parcelas</div><div class="metric">Faltam ${faltam}</div><div class="progress"><span style="width:${pct}%"></span></div><div class="list" style="margin-top:14px;"><div class="row"><div>Valor da parcela</div><div>${money(c.valor_atual || 0)}</div></div><div class="row"><div>Valor restante estimado</div><div>${money(restante)}</div></div><div class="row"><div>Previsão de término</div><div>${c.total_parcelas ? '2026' : '—'}</div></div></div>`; };
+  setProj('projMoto', moto); setProj('projMae', mae);
+}
+async function reloadAll(){ const [e1,s1,c1,p1] = await Promise.all([sb.from('entradas').select('*').order('id',{ascending:false}), sb.from('saidas').select('*').order('id',{ascending:false}), sb.from('contas_fixas').select('*').order('id',{ascending:false}), sb.from('parcelas').select('*').order('id',{ascending:false})]); state.entradas = e1.data || []; state.saidas = s1.data || []; state.contas = c1.data || []; state.parcelas = p1.data || []; render(); }
+byId('btnSync').addEventListener('click', async () => { try { await reloadAll(); alert('Conexão com Supabase OK.'); } catch (e) { console.error(e); alert('Erro ao conectar ao Supabase.'); } });
+byId('themeToggle').addEventListener('click', () => { document.documentElement.setAttribute('data-theme', document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+byId('modalEntrada').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalEntrada'); const [o,s] = m.querySelectorAll('select'); const payload = { origem:o.value, valor:parseMoney(m.querySelector('input').value), data_lancamento:m.querySelector('input[type="date"]').value || null, status:s.value, observacao:m.querySelector('textarea').value }; const { error } = await sb.from('entradas').insert(payload); if (!error) { m.classList.remove('show'); await reloadAll(); } else alert('Erro ao salvar entrada.'); });
+byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalSaida'); const [c,cv] = m.querySelectorAll('select'); const payload = { categoria:c.value, conta_vinculada:cv.value, valor:parseMoney(m.querySelector('input').value), data_lancamento:m.querySelector('input[type="date"]').value || null, observacao:m.querySelector('textarea').value }; const { error } = await sb.from('saidas').insert(payload); if (!error) { m.classList.remove('show'); await reloadAll(); } else alert('Erro ao salvar saída.'); });
+byId('modalConta').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalConta'); const inputs = m.querySelectorAll('input'); const tipo = m.querySelector('select').value; const payload = { nome:inputs[0].value, tipo, valor_atual:parseMoney(inputs[1].value), vencimento_dia:Number(inputs[2].value||0), parcela_atual: inputs[3].value ? Number(inputs[3].value) : null, total_parcelas: inputs[4].value ? Number(inputs[4].value) : null, status:'Aberta' }; const { error } = await sb.from('contas_fixas').insert(payload); if (!error) { m.classList.remove('show'); await reloadAll(); } else alert('Erro ao salvar conta.'); });
+byId('modalEditarConta').querySelector('.btn-primary').addEventListener('click', async () => { const m = byId('modalEditarConta'); const [conta, valor, venc, status] = m.querySelectorAll('select, input'); const { error } = await sb.from('contas_fixas').update({ valor_atual:parseMoney(valor.value), vencimento_dia:Number(venc.value||0), status:status.value }).eq('nome', conta.value); if (!error) { m.classList.remove('show'); await reloadAll(); } else alert('Erro ao atualizar conta.'); });
+reloadAll().catch(console.error);
+</script>
 </body>
 </html>
