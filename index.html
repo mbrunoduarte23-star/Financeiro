@@ -122,30 +122,7 @@
       </section>
 
       <section id="projecao" class="section">
-        <div class="grid grid-2">
-          <div class="card">
-            <h3 style="margin-top:0;">Parcela da moto</h3><div id="projMoto"></div>
-            <div class="pill">0 / 0 parcelas</div>
-            <div class="metric">Faltam 0</div>
-            <div class="progress"><span style="width:50%"></span></div>
-            <div class="list" style="margin-top:14px;">
-              <div class="row"><div>Valor da parcela</div><div>R$ 0,00</div></div>
-              <div class="row"><div>Valor restante estimado</div><div>R$ 0,00</div></div>
-              <div class="row"><div>Previsão de término</div><div>—</div></div>
-            </div>
-          </div>
-          <div class="card">
-            <h3 style="margin-top:0;">Cartão mãe</h3><div id="projMae"></div>
-            <div class="pill">0 / 0 parcelas</div>
-            <div class="metric">Faltam 0</div>
-            <div class="progress"><span style="width:66.6%"></span></div>
-            <div class="list" style="margin-top:14px;">
-              <div class="row"><div>Valor da parcela</div><div>R$ 0,00</div></div>
-              <div class="row"><div>Valor restante estimado</div><div>R$ 0,00</div></div>
-              <div class="row"><div>Previsão de término</div><div>—</div></div>
-            </div>
-          </div>
-        </div>
+        <div id="projecaoGrid" class="grid grid-2"></div>
       </section>
     </main>
   </div>
@@ -182,7 +159,43 @@ document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('c
 document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
 function fillDate(id){ const el = byId(id); const d = new Date(); const yyyy = 2026; const mm = String(d.getMonth()+1).padStart(2,'0'); const dd = String(d.getDate()).padStart(2,'0'); el.value = `${yyyy}-${mm}-${dd}`; }
 fillDate('dataEntrada'); fillDate('dataSaida');
-function upsertProjectionCard(id, c){ const root = byId(id); if (!root) return; const atual = Number(c.parcela_atual || 0); const total = Number(c.total_parcelas || 0); const faltam = Math.max(total - atual, 0); const pct = total ? (atual/total)*100 : 0; const restante = Math.max(Number(c.valor_atual || 0) * faltam, 0); root.innerHTML = `<div class="pill">${atual} / ${total} parcelas</div><div class="metric">Faltam ${faltam}</div><div class="progress"><span style="width:${pct}%"></span></div><div class="list" style="margin-top:14px;"><div class="row"><div>Valor da parcela</div><div>${money(c.valor_atual || 0)}</div></div><div class="row"><div>Valor restante estimado</div><div>${money(restante)}</div></div><div class="row"><div>Previsão de término</div><div>${total ? '2026' : '—'}</div></div></div>`; }
+function renderProjecao() {
+  const grid = byId('projecaoGrid');
+  if (!grid) return;
+  const parceladas = state.contas.filter(c => Number(c.total_parcelas) > 0);
+  if (!parceladas.length) {
+    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="muted">Nenhuma conta parcelada cadastrada ainda. Cadastre uma conta com total de parcelas.</div></div>';
+    return;
+  }
+  grid.innerHTML = parceladas.map(c => {
+    const atual = Number(c.parcela_atual || 0);
+    const total = Number(c.total_parcelas || 0);
+    const faltam = Math.max(total - atual, 0);
+    const pct = total ? Math.min((atual / total) * 100, 100) : 0;
+    const restante = parseMoney(c.valor_atual || 0) * faltam;
+    const agora = new Date();
+    const mesTermino = new Date(agora.getFullYear(), agora.getMonth() + faltam, 1);
+    const termino = faltam > 0
+      ? mesTermino.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+      : 'Quitada ✓';
+    const statusClass = c.status === 'Paga' ? 'pos' : c.status === 'Parcial' ? '' : 'neg';
+    return \`<div class="card">
+      <h3 style="margin-top:0;">\${c.nome}</h3>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+        <div class="pill">\${atual} / \${total} parcelas</div>
+        <div class="pill \${statusClass}" style="margin-left:auto;">\${c.status || 'Aberta'}</div>
+      </div>
+      <div class="metric">Faltam \${faltam}</div>
+      <div class="progress" style="margin:10px 0;"><span style="width:\${pct}%"></span></div>
+      <div class="list" style="margin-top:14px;">
+        <div class="row"><div>Valor da parcela</div><div>\${money(c.valor_atual || 0)}</div></div>
+        <div class="row"><div>Valor restante estimado</div><div>\${money(restante)}</div></div>
+        <div class="row"><div>Vencimento</div><div>Dia \${c.vencimento_dia || '—'}</div></div>
+        <div class="row"><div>Previsão de término</div><div>\${termino}</div></div>
+      </div>
+    </div>\`;
+  }).join('');
+}
 function render(){
   const entradaTotal = state.entradas.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saidaTotal = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
@@ -199,8 +212,7 @@ function render(){
   const cl = byId('contasList');
   const extras = state.contas.filter(c => !['Parcela da moto','Cartão mãe'].includes(c.nome));
   if (cl) cl.innerHTML = extras.length ? extras.map(c => `<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia || '-'} • ${c.tipo || ''}</div></div>`).join('') : '<div class="muted">Sem contas ainda.</div>';
-  upsertProjectionCard('projMoto', state.contas.find(c => c.nome === 'Parcela da moto') || {});
-  upsertProjectionCard('projMae', state.contas.find(c => c.nome === 'Cartão mãe') || {});
+  renderProjecao();
 }
 async function reloadAll(){ const [e1,s1,c1,p1] = await Promise.all([sb.from('entradas').select('*').order('id',{ascending:false}), sb.from('saidas').select('*').order('id',{ascending:false}), sb.from('contas_fixas').select('*').order('id',{ascending:false}), sb.from('parcelas').select('*').order('id',{ascending:false})]); state.entradas = e1.data || []; state.saidas = s1.data || []; state.contas = c1.data || []; state.parcelas = p1.data || []; render(); }
 async function saveEnter(modalId, table, payload){ const { error } = await sb.from(table).insert(payload); if (!error) { byId(modalId).classList.remove('show'); await reloadAll(); } else alert('Erro ao salvar.'); }
