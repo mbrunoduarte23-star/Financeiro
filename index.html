@@ -260,7 +260,7 @@ function renderProjecao() {
         <div class="pill">${c.status||'Aberta'}</div>
       </div>
       <div class="metric">Faltam ${faltam}</div>
-      <div class="progress" style="margin:10px 0;"><span style="width:${pct}%"></span></div>
+      <div class="progress" style="margin:10px 0;"><span style="width:` + pct + `%"></span></div>
       <div class="list" style="margin-top:14px;">
         <div class="row"><div>Valor da parcela</div><div>${money(c.valor_atual||0)}</div></div>
         <div class="row"><div>Valor restante estimado</div><div>${money(restante)}</div></div>
