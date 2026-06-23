@@ -53,6 +53,7 @@
         <button class="active" data-section="dashboard">Dashboard</button>
         <button data-section="contas">Contas fixas</button>
         <button data-section="projecao">Projeção</button>
+        <button data-section="investimentos">Investimentos</button>
       </nav>
       <button class="btn btn-secondary" id="themeToggle">Alternar tema</button>
       <button class="btn btn-secondary" id="btnSync">Sincronizar</button>
@@ -71,6 +72,8 @@
           <button class="btn btn-secondary" data-open="saida">+ Nova saída</button>
           <button class="btn btn-secondary" data-open="conta">+ Nova conta fixa</button>
           <button class="btn btn-secondary" data-open="editarConta">Editar conta fixa</button>
+          <button class="btn btn-secondary" data-open="adiantar">Adiantar parcela</button>
+          <button class="btn btn-secondary" data-open="excluirConta" style="background:var(--neg,#c0392b);color:#fff;">Excluir conta</button>
         </div>
       </div>
 
@@ -122,12 +125,22 @@
       </section>
 
       <section id="projecao" class="section"><div id="projecaoGrid" class="grid grid-2"></div></section>
+      <section id="investimentos" class="section">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn btn-primary" data-open="investimento">+ Novo investimento</button>
+        </div>
+        <div class="grid grid-5" id="invResumo" style="margin-bottom:16px;"></div>
+        <div class="card"><h3 style="margin-top:0;">Todos os investimentos</h3><div id="invLista"></div></div>
+      </section>
     </main>
   </div>
 
-  <div class="modal-backdrop" id="modalEntrada"><div class="modal"><div class="modal-head"><h3>Nova entrada</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Origem</label><select><option>Uber</option><option>99</option><option>iFood</option><option>Estágio</option><option>Outro</option></select></div><div class="field"><label>Status</label><select><option>Previsto</option><option>Recebido</option></select></div><div class="field"><label>Valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Data</label><input type="date" id="dataEntrada"></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: repasse da semana..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
+  <div class="modal-backdrop" id="modalInvestimento"><div class="modal"><div class="modal-head"><h3>Novo investimento</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Categoria</label><select id="invCategoria"><option>CDB</option><option>Caixinha</option><option>Fundo Imobiliário</option><option>Dólar</option><option>Outro</option></select></div><div class="field" id="invOutroWrap" style="display:none;"><label>Nome do investimento</label><input id="invOutroNome" placeholder="Ex.: Tesouro Direto"></div><div class="field"><label>Descrição</label><input id="invDescricao" placeholder="Ex.: CDB Nubank"></div><div class="field"><label>Valor investido (R$)</label><input id="invValor" placeholder="Ex.: 1500,00"></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarInv">Salvar</button></div></div></div>
+    <div class="modal-backdrop" id="modalAdiantar"><div class="modal"><div class="modal-head"><h3>Adiantar parcela</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field full"><label>Conta</label><select id="adiantarConta"><option value="">Selecione...</option></select></div><div class="field"><label>Mês da parcela</label><select id="adiantarMes"><option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div><div class="field"><label>Valor adiantado (R$)</label><input id="adiantarValor" placeholder="Ex.: 857,00"></div><div class="field full"><label>Observação</label><textarea id="adiantarObs" placeholder="Ex.: fatura de julho adiantada"></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarAdiantar">Registrar adiantamento</button></div></div></div>
+    <div class="modal-backdrop" id="modalExcluirConta"><div class="modal"><div class="modal-head"><h3>Excluir conta</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field full"><label>Conta</label><select id="excluirContaNome"><option value="">Carregando...</option></select></div><div class="field full" style="background:rgba(192,57,43,0.12);border-radius:8px;padding:10px;"><span style="color:#e74c3c;">⚠️ Esta ação é permanente e não pode ser desfeita.</span></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnConfirmarExcluir" style="background:#c0392b;">Excluir permanentemente</button></div></div></div>
+    <div class="modal-backdrop" id="modalEntrada"><div class="modal"><div class="modal-head"><h3>Nova entrada</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Origem</label><select><option>Uber</option><option>99</option><option>iFood</option><option>Estágio</option><option>Outro</option></select></div><div class="field"><label>Status</label><select><option>Previsto</option><option>Recebido</option></select></div><div class="field"><label>Valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Data</label><input type="date" id="dataEntrada"></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: repasse da semana..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
   <div class="modal-backdrop" id="modalSaida"><div class="modal"><div class="modal-head"><h3>Nova saída</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Categoria</label><select><option>Moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option><option>Alimentação</option><option>Combustível</option><option>Lazer</option><option>Outro</option></select></div><div class="field"><label>Conta vinculada</label><select><option>Nenhuma</option><option>Parcela da moto</option><option>Cartão mãe</option><option>Internet casa</option><option>Internet celular</option><option>Faculdade</option><option>Cartão Santander</option></select></div><div class="field"><label>Valor</label><input placeholder="R$ 0,00"></div><div class="field"><label>Data</label><input type="date" id="dataSaida"></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: gasolina, mercado..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
-  <div class="modal-backdrop" id="modalConta"><div class="modal"><div class="modal-head"><h3>Nova conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Nome da conta</label><input placeholder="Ex.: faculdade"></div><div class="field"><label>Tipo</label><select><option>Fixa</option><option>Variável</option><option>Parcelada</option></select></div><div class="field"><label>Valor atual</label><input placeholder="R$ 0,00"></div><div class="field"><label>Vencimento</label><input type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input placeholder="Ex.: 8"></div><div class="field"><label>Total de parcelas</label><input placeholder="Ex.: 12"></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary">Adicionar</button></div></div></div>
+  <div class="modal-backdrop" id="modalConta"><div class="modal"><div class="modal-head"><h3>Nova conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field"><label>Nome da conta</label><input id="contaNome" placeholder="Ex.: Cartão Santander"></div><div class="field"><label>Tipo</label><select id="contaTipo"><option value="fixa">Fixa</option><option value="variavel">Variável</option><option value="parcelada">Parcelada</option></select></div><div class="field"><label>Valor atual (R$)</label><input id="contaValor" placeholder="Ex.: 160,00"></div><div class="field"><label>Vencimento (dia)</label><input id="contaVenc" type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input id="contaParcelaAtual" type="number" placeholder="Ex.: 9"></div><div class="field"><label>Total de parcelas</label><input id="contaTotalParc" type="number" placeholder="Ex.: 18"></div><div id="mesesVariaveis" style="display:none;grid-column:1/-1;"><div class="pill" style="margin-bottom:10px;">Valor por mês (deixe em branco o que não souber)</div><div class="grid grid-2" style="gap:8px;" id="gridMeses"></div></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarConta2">Salvar</button></div></div></div>
   <div class="modal-backdrop" id="modalEditarConta"><div class="modal"><div class="modal-head"><h3>Editar conta fixa</h3><button class="close" data-close>&times;</button></div><div class="form"><div class="field full"><label>Conta</label><select id="editContaNome"><option value="">Carregando...</option></select></div><div class="field"><label>Novo valor (R$)</label><input id="editValor" placeholder="Ex.: 857,00"></div><div class="field"><label>Novo vencimento (dia)</label><input id="editVenc" type="number" min="1" max="31" placeholder="Dia do mês"></div><div class="field"><label>Parcela atual</label><input id="editParcelaAtual" type="number" placeholder="Ex.: 9"></div><div class="field"><label>Total de parcelas</label><input id="editTotalParcelas" type="number" placeholder="Ex.: 18"></div><div class="field"><label>Status</label><select id="editStatus"><option>Aberta</option><option>Parcial</option><option>Paga</option></select></div><div class="field full"><label>Observação</label><textarea placeholder="Ex.: reajuste..."></textarea></div></div><div class="footer-actions"><button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" id="btnSalvarConta">Salvar alterações</button></div></div></div>
 
   <script>
@@ -135,12 +148,13 @@ const SUPABASE_URL = "https://zmhpmnhgvydscmcqehic.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_G2cKjcrlG7BomyQJCeCChA_px2mKsxX";
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const state = { entradas: [], saidas: [], contas: [], parcelas: [] };
+const state = { entradas: [], saidas: [], contas: [], parcelas: [], investimentos: [], adiantamentos: [] };
 const money = v => `R$ ${Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const parseMoney = v => Number(String(v||'0').replace(/[^0-9,.-]/g,'').replace(',','.')) || 0;
 const byId = id => document.getElementById(id);
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-// nav
+// ── nav ──────────────────────────────────────────────────────────────────────
 const navButtons = document.querySelectorAll('.nav button');
 const sections   = document.querySelectorAll('.section');
 navButtons.forEach(btn => btn.addEventListener('click', () => {
@@ -150,8 +164,13 @@ navButtons.forEach(btn => btn.addEventListener('click', () => {
   byId(btn.dataset.section).classList.add('active');
 }));
 
-// modals
-const openMap = {entrada:'modalEntrada', saida:'modalSaida', conta:'modalConta', editarConta:'modalEditarConta'};
+// ── modals ───────────────────────────────────────────────────────────────────
+const openMap = {
+  entrada:'modalEntrada', saida:'modalSaida',
+  conta:'modalConta', editarConta:'modalEditarConta',
+  investimento:'modalInvestimento', adiantar:'modalAdiantar',
+  excluirConta:'modalExcluirConta'
+};
 document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('click', () => {
   const modalId = openMap[btn.dataset.open];
   if (modalId === 'modalEditarConta') {
@@ -160,52 +179,150 @@ document.querySelectorAll('[data-open]').forEach(btn => btn.addEventListener('cl
       ? state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
       : '<option value="">Nenhuma conta — sincronize primeiro</option>';
   }
+  if (modalId === 'modalExcluirConta') {
+    const sel = byId('excluirContaNome');
+    sel.innerHTML = state.contas.length
+      ? '<option value="">Selecione a conta...</option>' + state.contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
+      : '<option value="">Nenhuma conta — sincronize primeiro</option>';
+  }
+  if (modalId === 'modalAdiantar') {
+    const sel = byId('adiantarConta');
+    const contas = state.contas.filter(c => c.tipo === 'variavel' || Number(c.total_parcelas) > 0);
+    sel.innerHTML = contas.length
+      ? '<option value="">Selecione...</option>' + contas.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')
+      : '<option value="">Nenhuma conta parcelada/variável</option>';
+    // set current month
+    byId('adiantarMes').value = new Date().getMonth() + 1;
+  }
   byId(modalId).classList.add('show');
 }));
 document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => btn.closest('.modal-backdrop').classList.remove('show')));
 document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('show'); }));
 
-// dates
+// ── dates ────────────────────────────────────────────────────────────────────
 function fillDate(id){ const el=byId(id); if(!el) return; const d=new Date(); el.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 fillDate('dataEntrada'); fillDate('dataSaida');
+
+// ── tipo conta → mostrar meses variáveis ─────────────────────────────────────
+byId('contaTipo').addEventListener('change', function() {
+  const wrap = byId('mesesVariaveis');
+  if (this.value === 'variavel') {
+    wrap.style.display = 'block';
+    const grid = byId('gridMeses');
+    if (!grid.innerHTML) {
+      grid.innerHTML = MESES.map((m,i) =>
+        `<div class="field"><label>${m}</label><input class="mes-val" data-mes="${i+1}" placeholder="R$ 0,00"></div>`
+      ).join('');
+    }
+  } else {
+    wrap.style.display = 'none';
+  }
+});
+
+// ── show/hide "Outro" nome no modal investimento ──────────────────────────────
+byId('invCategoria').addEventListener('change', function() {
+  byId('invOutroWrap').style.display = this.value === 'Outro' ? 'block' : 'none';
+});
 
 // ── render projeção ──────────────────────────────────────────────────────────
 function renderProjecao() {
   const grid = byId('projecaoGrid');
   if (!grid) return;
+  const agora = new Date();
+  const mesAtual = agora.getMonth() + 1;
   const parceladas = state.contas.filter(c => Number(c.total_parcelas) > 0);
-  if (!parceladas.length) {
-    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="muted">Nenhuma conta parcelada encontrada. Cadastre uma conta com total de parcelas preenchido.</div></div>';
+  const variaveis  = state.contas.filter(c => c.tipo === 'variavel');
+  if (!parceladas.length && !variaveis.length) {
+    grid.innerHTML = '<div class="card" style="grid-column:1/-1"><div class="muted">Nenhuma conta parcelada ou variável cadastrada ainda.</div></div>';
     return;
   }
-  grid.innerHTML = parceladas.map(c => {
+  let cards = '';
+
+  // cards parceladas
+  cards += parceladas.map(c => {
     const atual  = Number(c.parcela_atual  || 0);
     const total  = Number(c.total_parcelas || 0);
     const faltam = Math.max(total - atual, 0);
     const pct    = total ? Math.min((atual / total) * 100, 100) : 0;
     const restante = parseMoney(c.valor_atual || 0) * faltam;
-    const agora  = new Date();
     const mesFim = new Date(agora.getFullYear(), agora.getMonth() + faltam, 1);
-    const termino = faltam > 0
-      ? mesFim.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})
-      : 'Quitada ✓';
-    const statusPill = c.status === 'Paga' ? 'style="background:var(--pos)"' : c.status === 'Parcial' ? 'style="background:#b8860b"' : '';
+    const termino = faltam > 0 ? mesFim.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : 'Quitada ✓';
+    // adiantamentos desta conta
+    const adiantados = state.adiantamentos.filter(a => Number(a.conta_id) === Number(c.id));
+    const adiantHtml = adiantados.length
+      ? '<div class="pill" style="margin-top:10px;background:var(--pos)">Parcelas adiantadas</div>' +
+        adiantados.map(a => `<div class="row"><div>${MESES[Number(a.mes)-1]}</div><div class="pos">${money(a.valor)} adiantado</div></div>`).join('')
+      : '';
     return `<div class="card">
       <h3 style="margin-top:0;">${c.nome}</h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
         <div class="pill">${atual} / ${total} parcelas</div>
-        <div class="pill" ${statusPill}>${c.status || 'Aberta'}</div>
+        <div class="pill">${c.status||'Aberta'}</div>
       </div>
       <div class="metric">Faltam ${faltam}</div>
       <div class="progress" style="margin:10px 0;"><span style="width:${pct}%"></span></div>
       <div class="list" style="margin-top:14px;">
         <div class="row"><div>Valor da parcela</div><div>${money(c.valor_atual||0)}</div></div>
         <div class="row"><div>Valor restante estimado</div><div>${money(restante)}</div></div>
-        <div class="row"><div>Vencimento</div><div>Dia ${c.vencimento_dia || '—'}</div></div>
+        <div class="row"><div>Vencimento</div><div>Dia ${c.vencimento_dia||'—'}</div></div>
         <div class="row"><div>Previsão de término</div><div>${termino}</div></div>
       </div>
+      ${adiantHtml}
     </div>`;
   }).join('');
+
+  // cards variáveis (ex: Cartão Santander)
+  cards += variaveis.map(c => {
+    // meses_valores é um JSON salvo no banco: {1: 500, 2: 320, ...}
+    let mesesVal = {};
+    try { mesesVal = JSON.parse(c.meses_valores || '{}'); } catch(e) {}
+    // adiantamentos
+    const adiantados = state.adiantamentos.filter(a => Number(a.conta_id) === Number(c.id));
+    const adiantPorMes = {};
+    adiantados.forEach(a => { adiantPorMes[Number(a.mes)] = (adiantPorMes[Number(a.mes)]||0) + parseMoney(a.valor); });
+    const rows = MESES.map((m,i) => {
+      const mes = i + 1;
+      const val = parseMoney(mesesVal[mes] || 0);
+      const adiant = adiantPorMes[mes] || 0;
+      const restante = Math.max(val - adiant, 0);
+      if (!val && !adiant) return '';
+      const destaque = mes === mesAtual ? 'style="font-weight:600;"' : '';
+      const tag = mes === mesAtual ? ' <span class="pill" style="font-size:10px;padding:2px 6px;">mês atual</span>' : '';
+      return `<div class="row" ${destaque}><div>${m}${tag}</div><div>${adiant > 0 ? `<span class="pos" style="font-size:11px;">-${money(adiant)}</span> ` : ''}${money(restante)}</div></div>`;
+    }).filter(Boolean).join('');
+    return `<div class="card">
+      <h3 style="margin-top:0;">${c.nome} <span class="pill" style="font-size:11px;">variável</span></h3>
+      <div class="muted" style="margin-bottom:10px;">Vence dia ${c.vencimento_dia||'—'} • ${c.status||'Aberta'}</div>
+      <div class="list">${rows || '<div class="muted">Nenhum valor cadastrado por mês ainda.</div>'}</div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML = cards;
+}
+
+// ── render investimentos ──────────────────────────────────────────────────────
+function renderInvestimentos() {
+  const resumo = byId('invResumo');
+  const lista  = byId('invLista');
+  if (!resumo || !lista) return;
+  const cats = ['CDB','Caixinha','Fundo Imobiliário','Dólar','Outro'];
+  const totais = {};
+  cats.forEach(c => totais[c] = 0);
+  let totalGeral = 0;
+  state.investimentos.forEach(inv => {
+    const cat = inv.categoria || 'Outro';
+    totais[cat] = (totais[cat] || 0) + parseMoney(inv.valor);
+    totalGeral += parseMoney(inv.valor);
+  });
+  resumo.innerHTML = `<div class="card"><div class="pill">Total geral</div><div class="metric">${money(totalGeral)}</div></div>` +
+    cats.filter(c => totais[c] > 0).map(c =>
+      `<div class="card"><div class="pill">${c}</div><div class="metric">${money(totais[c])}</div></div>`
+    ).join('');
+  lista.innerHTML = state.investimentos.length
+    ? state.investimentos.map(inv =>
+        `<div class="row"><div><strong>${inv.descricao||inv.categoria}</strong><div class="muted">${inv.categoria}</div></div><div class="pos">${money(inv.valor)}</div></div>`
+      ).join('')
+    : '<div class="muted">Nenhum investimento cadastrado ainda.</div>';
 }
 
 // ── render principal ─────────────────────────────────────────────────────────
@@ -235,30 +352,34 @@ function render() {
     </tbody></table>`;
 
   const cl = byId('contasList');
-  const fixas = state.contas.filter(c => !Number(c.total_parcelas));
-  const parc  = state.contas.filter(c =>  Number(c.total_parcelas) > 0);
   if (cl) {
-    const fixasHtml = fixas.length
-      ? fixas.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia||'-'} • ${c.tipo||'fixa'}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('')
-      : '';
-    const parcHtml = parc.length
-      ? parc.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Parcelada • ${c.parcela_atual||0}/${c.total_parcelas||0}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('')
-      : '';
+    const fixas = state.contas.filter(c => !Number(c.total_parcelas));
+    const parc  = state.contas.filter(c =>  Number(c.total_parcelas) > 0);
+    const fixasHtml = fixas.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Vence dia ${c.vencimento_dia||'-'} • ${c.tipo||'fixa'}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('');
+    const parcHtml  = parc.map(c=>`<div class="card"><h3>${c.nome}</h3><div class="metric">${money(c.valor_atual)}</div><div class="muted">Parcelada • ${c.parcela_atual||0}/${c.total_parcelas||0}</div><div class="pill" style="margin-top:6px;">${c.status||'Aberta'}</div></div>`).join('');
     cl.innerHTML = (fixasHtml + parcHtml) || '<div class="muted">Sem contas ainda.</div>';
   }
 
   renderProjecao();
+  renderInvestimentos();
 }
 
 // ── reload ───────────────────────────────────────────────────────────────────
 async function reloadAll() {
-  const [e1,s1,c1,p1] = await Promise.all([
+  const [e1,s1,c1,p1,i1,a1] = await Promise.all([
     sb.from('entradas').select('*').order('id',{ascending:false}),
     sb.from('saidas').select('*').order('id',{ascending:false}),
     sb.from('contas_fixas').select('*').order('id',{ascending:false}),
-    sb.from('parcelas').select('*').order('id',{ascending:false})
+    sb.from('parcelas').select('*').order('id',{ascending:false}),
+    sb.from('investimentos').select('*').order('id',{ascending:false}),
+    sb.from('adiantamentos').select('*').order('id',{ascending:false})
   ]);
-  state.entradas = e1.data||[]; state.saidas=s1.data||[]; state.contas=c1.data||[]; state.parcelas=p1.data||[];
+  state.entradas      = e1.data||[];
+  state.saidas        = s1.data||[];
+  state.contas        = c1.data||[];
+  state.parcelas      = p1.data||[];
+  state.investimentos = i1.data||[];
+  state.adiantamentos = a1.data||[];
   render();
 }
 
@@ -300,20 +421,35 @@ byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async
   });
 });
 
-byId('modalConta').querySelector('.btn-primary').addEventListener('click', async () => {
-  const m = byId('modalConta');
-  const inputs = m.querySelectorAll('input');
-  const tipo = m.querySelector('select').value;
+// nova conta — suporte a variável com meses
+byId('btnSalvarConta2').addEventListener('click', async () => {
+  const nome  = byId('contaNome').value.trim();
+  const tipo  = byId('contaTipo').value;
+  const valor = byId('contaValor').value;
+  const venc  = byId('contaVenc').value;
+  const pa    = byId('contaParcelaAtual').value;
+  const tp    = byId('contaTotalParc').value;
+  if (!nome) return alert('Informe o nome da conta.');
+  let mesesValores = null;
+  if (tipo === 'variavel') {
+    const obj = {};
+    document.querySelectorAll('.mes-val').forEach(inp => {
+      if (inp.value) obj[inp.dataset.mes] = parseMoney(inp.value);
+    });
+    mesesValores = JSON.stringify(obj);
+  }
   await saveEnter('modalConta','contas_fixas',{
-    nome:inputs[0].value, tipo,
-    valor_atual:parseMoney(inputs[1].value),
-    vencimento_dia:Number(inputs[2].value||0),
-    parcela_atual:  inputs[3].value ? Number(inputs[3].value) : null,
-    total_parcelas: inputs[4].value ? Number(inputs[4].value) : null,
+    nome, tipo,
+    valor_atual: parseMoney(valor),
+    vencimento_dia: Number(venc||0),
+    parcela_atual:  pa ? Number(pa) : null,
+    total_parcelas: tp ? Number(tp) : null,
+    meses_valores:  mesesValores,
     status:'Aberta'
   });
 });
 
+// editar conta
 byId('btnSalvarConta').addEventListener('click', async () => {
   const contaId = byId('editContaNome').value;
   if (!contaId) return alert('Selecione uma conta primeiro.');
@@ -330,6 +466,44 @@ byId('btnSalvarConta').addEventListener('click', async () => {
   const { error } = await sb.from('contas_fixas').update(payload).eq('id', Number(contaId));
   if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); }
   else { console.error(error); alert('Erro ao atualizar: ' + error.message); }
+});
+
+// novo investimento
+byId('btnSalvarInv').addEventListener('click', async () => {
+  const categoria = byId('invCategoria').value;
+  const descricao = categoria === 'Outro'
+    ? (byId('invOutroNome').value.trim() || 'Outro')
+    : (byId('invDescricao').value.trim() || categoria);
+  const valor = byId('invValor').value;
+  if (!valor) return alert('Informe o valor investido.');
+  await saveEnter('modalInvestimento','investimentos',{ categoria, descricao, valor: parseMoney(valor) });
+});
+
+// adiantar parcela
+byId('btnSalvarAdiantar').addEventListener('click', async () => {
+  const contaId = byId('adiantarConta').value;
+  const mes     = byId('adiantarMes').value;
+  const valor   = byId('adiantarValor').value;
+  const obs     = byId('adiantarObs').value;
+  if (!contaId) return alert('Selecione uma conta.');
+  if (!valor)   return alert('Informe o valor adiantado.');
+  await saveEnter('modalAdiantar','adiantamentos',{
+    conta_id: Number(contaId),
+    mes: Number(mes),
+    valor: parseMoney(valor),
+    observacao: obs
+  });
+});
+
+// excluir conta
+byId('btnConfirmarExcluir').addEventListener('click', async () => {
+  const contaId = byId('excluirContaNome').value;
+  if (!contaId) return alert('Selecione uma conta.');
+  const nome = byId('excluirContaNome').options[byId('excluirContaNome').selectedIndex].text;
+  if (!confirm(`Tem certeza que deseja excluir "${nome}"? Essa ação não pode ser desfeita.`)) return;
+  const { error } = await sb.from('contas_fixas').delete().eq('id', Number(contaId));
+  if (!error) { byId('modalExcluirConta').classList.remove('show'); await reloadAll(); }
+  else { console.error(error); alert('Erro ao excluir: ' + error.message); }
 });
 
 reloadAll().catch(console.error);
