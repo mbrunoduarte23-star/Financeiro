@@ -73,7 +73,7 @@
       <div class="header">
         <div>
           <div class="pill" style="margin-bottom:10px;">V2 fechada</div>
-          <h1>Controle financeiro pessoal</h1>
+          <h1>Controle financeiro pessoal</h1><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;"><button class="btn btn-secondary" id="viewWeekly">Semanal</button><button class="btn btn-secondary" id="viewMonthly">Mensal</button></div>
           <p>Entradas de iFood/Uber/99/estágio, saídas, contas fixas e projeção de parcelas.</p>
         </div>
         <div class="top-actions">
@@ -158,9 +158,19 @@ const SUPABASE_ANON_KEY = "sb_publishable_G2cKjcrlG7BomyQJCeCChA_px2mKsxX";
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const state = { entradas: [], saidas: [], contas: [], parcelas: [], investimentos: [], adiantamentos: [] };
+let dashboardView = 'weekly';
 const money = v => `R$ ${Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const parseMoney = v => Number(String(v||'0').replace(/[^0-9,.-]/g,'').replace(',','.')) || 0;
 const byId = id => document.getElementById(id);
+const startOfWeek = d => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0,0,0,0); return x; };
+const startOfMonth = d => { const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; };
+const withinView = (dateStr) => {
+  const d = new Date(dateStr || new Date());
+  const now = new Date();
+  const s = dashboardView === 'monthly' ? startOfMonth(now) : startOfWeek(now);
+  const e = new Date(now); e.setHours(23,59,59,999);
+  return d >= s && d <= e;
+};
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 // ── nav ──────────────────────────────────────────────────────────────────────
@@ -341,13 +351,15 @@ function renderInvestimentos() {
 
 // ── render principal ─────────────────────────────────────────────────────────
 function render() {
-  const entradaTotal = state.entradas.filter(x=>String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const saidaTotal   = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const entradasView = state.entradas.filter(x => String(x.status).toLowerCase()==='recebido' && withinView(x.data_lancamento));
+  const saidasView   = state.saidas.filter(x => withinView(x.data_lancamento));
+  const entradaTotal = entradasView.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const saidaTotal   = saidasView.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saldo  = entradaTotal - saidaTotal;
-  const uber   = state.entradas.filter(x=>x.origem==='Uber' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const d99    = state.entradas.filter(x=>x.origem==='99' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const ifood  = state.entradas.filter(x=>x.origem==='iFood' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const receber= state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const uber   = entradasView.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const d99    = entradasView.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const ifood  = entradasView.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const receber= state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto' && withinView(x.data_lancamento)).reduce((a,b)=>a+parseMoney(b.valor),0);
   [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]]
     .forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
 
@@ -363,7 +375,7 @@ function render() {
         ? String(x.status).toLowerCase() === 'recebido'
         : String(x.observacao||'').toLowerCase() === 'confirmada';
       const isCancelado = isEntrada
-        ? String(x.observacao||'').toLowerCase() === 'cancelada'
+        ? false
         : String(x.observacao||'').toLowerCase() === 'cancelada';
       const label = isEntrada
         ? `<strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div>`
@@ -372,9 +384,9 @@ function render() {
         ? `<div class="pos">+ ${money(parseMoney(x.valor))}</div>`
         : `<div class="neg">- ${money(parseMoney(x.valor))}</div>`;
       const actions = isConfirmado
-        ? `<span class="pill" style="background:var(--pos);color:#fff;">Visto</span>`
+        ? `<span title="Confirmado" style="font-size:18px;color:var(--pos)">✔</span>`
         : isCancelado
-        ? `<span class="pill" style="background:var(--danger);color:#fff;">Cancelado</span>`
+        ? `<span title="Cancelado" style="font-size:18px;color:var(--neg)">✘</span>`
         : `<button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;" data-kind="${x.tipo}" data-id="${x.id}" data-action="confirmar" title="Confirmar">✔</button><button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;background:var(--danger,#b91c1c);color:#fff;" data-kind="${x.tipo}" data-id="${x.id}" data-action="cancelar" title="Cancelar">✕</button>`;
       return `<div class="row"><div>${label}</div><div style="display:flex;gap:8px;align-items:center;">${actions}${valor}</div></div>`;
     }).join('') || '<div class="muted">Sem lançamentos ainda.</div>';
@@ -449,11 +461,8 @@ document.addEventListener('click', async (e) => {
   } else {
     ({ error } = await sb.from(table).delete().eq('id', id));
   }
-  if (!error) {
-    await reloadAll();
-    const dash = document.querySelector('[data-section="dashboard"]');
-    if (dash) dash.click();
-  } else { console.error(error); alert('Erro: ' + error.message); }
+  if (!error) { await reloadAll(); }
+  else { console.error(error); alert('Erro: ' + error.message); }
 });
 
 byId('btnSync').addEventListener('click', async () => {
@@ -461,6 +470,8 @@ byId('btnSync').addEventListener('click', async () => {
   catch(e) { console.error(e); alert('Erro ao conectar ao Supabase.'); }
 });
 
+byId('viewWeekly').addEventListener('click', () => { dashboardView = 'weekly'; reloadAll(); });
+byId('viewMonthly').addEventListener('click', () => { dashboardView = 'monthly'; reloadAll(); });
 byId('themeToggle').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme',
     document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
