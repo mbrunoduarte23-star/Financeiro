@@ -352,7 +352,7 @@ function renderInvestimentos() {
 // ── render principal ─────────────────────────────────────────────────────────
 function render() {
   const entradasView = state.entradas.filter(x => String(x.status).toLowerCase()==='recebido' && withinView(x.data_lancamento));
-  const saidasView   = state.saidas.filter(x => withinView(x.data_lancamento));
+  const saidasView   = state.saidas.filter(x => String(x.observacao||'').toLowerCase()==='confirmada' && withinView(x.data_lancamento));
   const entradaTotal = entradasView.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saidaTotal   = saidasView.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saldo  = entradaTotal - saidaTotal;
@@ -366,9 +366,13 @@ function render() {
   const mov = byId('movRecentes');
   if (mov) {
     const allMov = [
-      ...state.entradas.slice(0,5).map(x=>({ tipo:'entrada', ...x })),
-      ...state.saidas.slice(0,5).map(x=>({ tipo:'saida', ...x }))
-    ].sort((a,b)=> (b.id||0)-(a.id||0)).slice(0,6);
+      ...state.entradas.map(x=>({ tipo:'entrada', ...x })),
+      ...state.saidas.map(x=>({ tipo:'saida', ...x }))
+    ]
+    .filter(x => x.tipo === 'entrada' ? String(x.observacao||'').toLowerCase() !== 'cancelada' : String(x.observacao||'').toLowerCase() !== 'cancelada')
+    .filter(x => withinView(x.data_lancamento))
+    .sort((a,b)=> (b.id||0)-(a.id||0))
+    .slice(0,6);
     mov.innerHTML = allMov.map(x=>{
       const isEntrada = x.tipo === 'entrada';
       const isConfirmado = isEntrada
@@ -379,7 +383,7 @@ function render() {
         : String(x.observacao||'').toLowerCase() === 'cancelada';
       const label = isEntrada
         ? `<strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div>`
-        : `<strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div>`;
+        : `<strong>Saída ${x.categoria}</strong><div class="muted">${String(x.observacao||'Pendente')}</div>`;
       const valor = isEntrada
         ? `<div class="pos">+ ${money(parseMoney(x.valor))}</div>`
         : `<div class="neg">- ${money(parseMoney(x.valor))}</div>`;
@@ -444,25 +448,59 @@ async function saveEnter(modalId, table, payload) {
 document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.mov-action');
   if (!btn) return;
-  const kind   = btn.dataset.kind;
-  const id     = Number(btn.dataset.id);
+  const kind = btn.dataset.kind;
+  const id = Number(btn.dataset.id);
   const action = btn.dataset.action;
-  const table  = kind === 'entrada' ? 'entradas' : 'saidas';
-  const msg    = action === 'confirmar'
-    ? 'Confirmar esta movimentação? O valor será contabilizado no saldo.'
-    : 'Cancelar esta movimentação? Ela será removida.';
+  const msg = action === 'confirmar'
+    ? 'Confirmar esta movimentação? O dashboard será atualizado.'
+    : 'Cancelar esta movimentação? Ela será removida do dashboard e da lista.';
   if (!confirm(msg)) return;
-  let error;
+
+  const arr = kind === 'entrada' ? state.entradas : state.saidas;
+  const item = arr.find(x => Number(x.id) === id);
+  if (!item) return;
+
+  let error = null;
   if (action === 'confirmar') {
-    const payload = kind === 'entrada'
-      ? { status: 'Recebido' }
-      : { observacao: 'Confirmada' };
-    ({ error } = await sb.from(table).update(payload).eq('id', id));
+    if (kind === 'entrada') {
+      item.status = 'Recebido';
+      try {
+        const res = await sb.from('entradas').update({ status: 'Recebido' }).eq('id', id);
+        error = res.error || null;
+      } catch (err) { error = err; }
+    } else {
+      item.observacao = 'Confirmada';
+      try {
+        const res = await sb.from('saidas').update({ observacao: 'Confirmada' }).eq('id', id);
+        error = res.error || null;
+      } catch (err) { error = err; }
+    }
   } else {
-    ({ error } = await sb.from(table).delete().eq('id', id));
+    if (kind === 'entrada') {
+      item.observacao = 'Cancelada';
+      state.entradas = state.entradas.filter(x => Number(x.id) !== id);
+      try {
+        const res = await sb.from('entradas').delete().eq('id', id);
+        error = res.error || null;
+      } catch (err) { error = err; }
+    } else {
+      item.observacao = 'Cancelada';
+      state.saidas = state.saidas.filter(x => Number(x.id) !== id);
+      try {
+        const res = await sb.from('saidas').delete().eq('id', id);
+        error = res.error || null;
+      } catch (err) { error = err; }
+    }
   }
-  if (!error) { await reloadAll(); }
-  else { console.error(error); alert('Erro: ' + error.message); }
+
+  render();
+
+  if (error) {
+    console.error(error);
+    alert('A interface foi atualizada, mas o Supabase recusou a confirmação. Libere UPDATE para entradas/saídas nas policies.');
+  } else {
+    await reloadAll();
+  }
 });
 
 byId('btnSync').addEventListener('click', async () => {
