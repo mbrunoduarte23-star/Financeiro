@@ -341,26 +341,44 @@ function renderInvestimentos() {
 
 // ── render principal ─────────────────────────────────────────────────────────
 function render() {
-  const entradaTotal = state.entradas.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const entradaTotal = state.entradas.filter(x=>String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
   const saidaTotal   = state.saidas.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saldo  = entradaTotal - saidaTotal;
-  const uber   = state.entradas.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const d99    = state.entradas.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const ifood  = state.entradas.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const uber   = state.entradas.filter(x=>x.origem==='Uber' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const d99    = state.entradas.filter(x=>x.origem==='99' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
+  const ifood  = state.entradas.filter(x=>x.origem==='iFood' && String(x.status).toLowerCase()==='recebido').reduce((a,b)=>a+parseMoney(b.valor),0);
   const receber= state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto').reduce((a,b)=>a+parseMoney(b.valor),0);
   [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]]
     .forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
 
   const mov = byId('movRecentes');
-  if (mov) mov.innerHTML = [
-    ...state.entradas.slice(0,3).map(x=>{
-      const isRec = String(x.status).toLowerCase()==='recebido';
-      return `<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn btn-secondary mov-action" data-kind="entrada" data-id="${x.id}" data-action="confirmar" title="Confirmar recebimento">${isRec ? '✓' : '☐'}</button><button class="btn btn-secondary mov-action" data-kind="entrada" data-id="${x.id}" data-action="cancelar" title="Cancelar recebimento">✕</button><div class="pos">+ ${money(parseMoney(x.valor))}</div></div></div>`;
-    }),
-    ...state.saidas.slice(0,3).map(x=>{
-      return `<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn btn-secondary mov-action" data-kind="saida" data-id="${x.id}" data-action="confirmar" title="Confirmar saída">✓</button><button class="btn btn-secondary mov-action" data-kind="saida" data-id="${x.id}" data-action="cancelar" title="Cancelar saída">✕</button><div class="neg">- ${money(parseMoney(x.valor))}</div></div></div>`;
-    })
-  ].join('') || '<div class="muted">Sem lançamentos ainda.</div>';
+  if (mov) {
+    const allMov = [
+      ...state.entradas.slice(0,5).map(x=>({ tipo:'entrada', ...x })),
+      ...state.saidas.slice(0,5).map(x=>({ tipo:'saida', ...x }))
+    ].sort((a,b)=> (b.id||0)-(a.id||0)).slice(0,6);
+    mov.innerHTML = allMov.map(x=>{
+      const isEntrada = x.tipo === 'entrada';
+      const isConfirmado = isEntrada
+        ? String(x.status).toLowerCase() === 'recebido'
+        : String(x.observacao||'').toLowerCase() === 'confirmada';
+      const isCancelado = isEntrada
+        ? false
+        : String(x.observacao||'').toLowerCase() === 'cancelada';
+      const label = isEntrada
+        ? `<strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div>`
+        : `<strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div>`;
+      const valor = isEntrada
+        ? `<div class="pos">+ ${money(parseMoney(x.valor))}</div>`
+        : `<div class="neg">- ${money(parseMoney(x.valor))}</div>`;
+      const actions = isConfirmado
+        ? `<span title="Confirmado" style="font-size:18px;color:var(--pos)">✔</span>`
+        : isCancelado
+        ? `<span title="Cancelado" style="font-size:18px;color:var(--neg)">✘</span>`
+        : `<button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;" data-kind="${x.tipo}" data-id="${x.id}" data-action="confirmar" title="Confirmar">✔</button><button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;background:var(--danger,#b91c1c);color:#fff;" data-kind="${x.tipo}" data-id="${x.id}" data-action="cancelar" title="Cancelar">✕</button>`;
+      return `<div class="row"><div>${label}</div><div style="display:flex;gap:8px;align-items:center;">${actions}${valor}</div></div>`;
+    }).join('') || '<div class="muted">Sem lançamentos ainda.</div>';
+  }
 
   const rep = byId('repasses');
   if (rep) rep.innerHTML = `<table><thead><tr><th>Origem</th><th>Dia</th><th>Valor</th></tr></thead><tbody>
@@ -411,23 +429,28 @@ async function saveEnter(modalId, table, payload) {
 // ── listeners ────────────────────────────────────────────────────────────────
 
 // movimentações recentes actions
-byId('movRecentes').addEventListener('click', async (e) => {
+document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.mov-action');
   if (!btn) return;
-  const kind = btn.dataset.kind;
-  const id = Number(btn.dataset.id);
+  const kind   = btn.dataset.kind;
+  const id     = Number(btn.dataset.id);
   const action = btn.dataset.action;
-  const table = kind === 'entrada' ? 'entradas' : 'saidas';
-  const confirmMsg = action === 'confirmar'
-    ? 'Confirmar esta movimentação?'
-    : 'Cancelar esta movimentação?';
-  if (!confirm(confirmMsg)) return;
-  const payload = kind === 'entrada'
-    ? { status: action === 'confirmar' ? 'Recebido' : 'Previsto' }
-    : { observacao: action === 'confirmar' ? 'Confirmada' : 'Cancelada' };
-  const { error } = await sb.from(table).update(payload).eq('id', id);
-  if (!error) { await reloadAll(); }
-  else { console.error(error); alert('Erro ao atualizar movimentação: ' + error.message); }
+  const table  = kind === 'entrada' ? 'entradas' : 'saidas';
+  const msg    = action === 'confirmar'
+    ? 'Confirmar esta movimentação? O valor será contabilizado no saldo.'
+    : 'Cancelar esta movimentação? Ela será removida.';
+  if (!confirm(msg)) return;
+  let error;
+  if (action === 'confirmar') {
+    const payload = kind === 'entrada'
+      ? { status: 'Recebido' }
+      : { observacao: 'Confirmada' };
+    ({ error } = await sb.from(table).update(payload).eq('id', id));
+  } else {
+    ({ error } = await sb.from(table).delete().eq('id', id));
+  }
+  if (!error) await reloadAll();
+  else { console.error(error); alert('Erro: ' + error.message); }
 });
 
 byId('btnSync').addEventListener('click', async () => {
