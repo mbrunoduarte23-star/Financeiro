@@ -359,7 +359,7 @@ function render() {
   const uber   = entradasView.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
   const d99    = entradasView.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
   const ifood  = entradasView.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const receber= state.entradas.filter(x=>String(x.status).toLowerCase()==='previsto' && withinView(x.data_lancamento)).reduce((a,b)=>a+parseMoney(b.valor),0);
+  const receber = 0;
   [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]]
     .forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
 
@@ -456,36 +456,41 @@ document.addEventListener('click', async (e) => {
     : 'Cancelar esta movimentação? Ela será removida do dashboard e da lista.';
   if (!confirm(msg)) return;
 
-  const arr = kind === 'entrada' ? state.entradas : state.saidas;
-  const item = arr.find(x => Number(x.id) === id);
-  if (!item) return;
+  const isEntrada = kind === 'entrada';
+  const arr = isEntrada ? state.entradas : state.saidas;
+  const idx = arr.findIndex(x => Number(x.id) === id);
+  if (idx < 0) return;
+  const original = JSON.parse(JSON.stringify(arr[idx]));
 
   let error = null;
   if (action === 'confirmar') {
-    if (kind === 'entrada') {
-      item.status = 'Recebido';
+    if (isEntrada) {
+      state.entradas[idx].status = 'Recebido';
+      state.entradas[idx].observacao = 'Confirmada';
+      render();
       try {
-        const res = await sb.from('entradas').update({ status: 'Recebido' }).eq('id', id);
+        const res = await sb.from('entradas').update({ status: 'Recebido', observacao: 'Confirmada' }).eq('id', id);
         error = res.error || null;
       } catch (err) { error = err; }
     } else {
-      item.observacao = 'Confirmada';
+      state.saidas[idx].observacao = 'Confirmada';
+      render();
       try {
         const res = await sb.from('saidas').update({ observacao: 'Confirmada' }).eq('id', id);
         error = res.error || null;
       } catch (err) { error = err; }
     }
   } else {
-    if (kind === 'entrada') {
-      item.observacao = 'Cancelada';
-      state.entradas = state.entradas.filter(x => Number(x.id) !== id);
+    if (isEntrada) {
+      state.entradas.splice(idx, 1);
+      render();
       try {
         const res = await sb.from('entradas').delete().eq('id', id);
         error = res.error || null;
       } catch (err) { error = err; }
     } else {
-      item.observacao = 'Cancelada';
-      state.saidas = state.saidas.filter(x => Number(x.id) !== id);
+      state.saidas.splice(idx, 1);
+      render();
       try {
         const res = await sb.from('saidas').delete().eq('id', id);
         error = res.error || null;
@@ -493,14 +498,26 @@ document.addEventListener('click', async (e) => {
     }
   }
 
-  render();
-
   if (error) {
     console.error(error);
-    alert('A interface foi atualizada, mas o Supabase recusou a confirmação. Libere UPDATE para entradas/saídas nas policies.');
-  } else {
-    await reloadAll();
+    if (action === 'confirmar') {
+      if (isEntrada) state.entradas[idx] = original;
+      else state.saidas[idx] = original;
+    } else {
+      if (isEntrada) state.entradas.splice(idx, 0, original);
+      else state.saidas.splice(idx, 0, original);
+    }
+    render();
+    alert('Erro ao salvar no Supabase: ' + (error.message || error));
+    return;
   }
+
+  if (action === 'confirmar') {
+    render();
+    return;
+  }
+
+  await reloadAll();
 });
 
 byId('btnSync').addEventListener('click', async () => {
