@@ -65,7 +65,7 @@
         <button data-section="investimentos">Investimentos</button>
       </nav>
       <button class="btn btn-secondary" id="themeToggle">Alternar tema</button>
-      <button class="btn btn-secondary" id="btnSync">Sincronizar</button>
+      <button class="btn btn-secondary" id="btnSync">Sincronizar</button><button class="btn btn-secondary" id="btnResetAll" style="border-color:var(--danger);color:var(--danger);">Zerar tudo</button>
       <div class="muted" style="font-size:12px;">Acesso via GitHub + Supabase, pensado para usar no PC e em 2 celulares.</div>
     </aside>
 
@@ -73,7 +73,7 @@
       <div class="header">
         <div>
           <div class="pill" style="margin-bottom:10px;">V2 fechada</div>
-          <h1>Controle financeiro pessoal</h1><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;"><button class="btn btn-secondary" id="viewWeekly">Semanal</button><button class="btn btn-secondary" id="viewMonthly">Mensal</button></div>
+          <h1>Controle financeiro pessoal</h1><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;"><button class="btn btn-secondary" id="viewDaily">Hoje</button><button class="btn btn-secondary" id="viewWeekly">Semana</button><button class="btn btn-secondary" id="viewMonthly">Mês</button><button class="btn btn-secondary" id="viewYearly">Ano</button><span class="pill" id="periodLabel">Período: semana atual</span></div>
           <p>Entradas de iFood/Uber/99/estágio, saídas, contas fixas e projeção de parcelas.</p>
         </div>
         <div class="top-actions">
@@ -92,7 +92,7 @@
           <div class="card"><div class="pill">Uber</div><div class="metric" id="saldoUber">R$ 0,00</div><div class="muted">Repasse segunda</div></div>
           <div class="card"><div class="pill">99</div><div class="metric" id="saldo99">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
           <div class="card"><div class="pill">iFood</div><div class="metric" id="saldoIfood">R$ 0,00</div><div class="muted">Repasse quarta</div></div>
-          <div class="card"><div class="pill">A receber</div><div class="metric" id="saldoReceber">R$ 0,00</div><div class="muted">Total da semana</div></div>
+          <div class="card"><div class="pill">A receber</div><div class="metric" id="saldoReceber">R$ 0,00</div><div class="muted" id="receberLabel">Total do período</div></div>
         </div>
         <div class="grid grid-2" style="margin-top:16px;">
           <div class="card">
@@ -126,7 +126,7 @@
         <div class="grid grid-3" id="contasList">
           <div class="card"><h3>Internet casa</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 10 • fixa</div></div>
           <div class="card"><h3>Internet celular</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 10 • variável</div></div>
-          <div class="card"><h3>Faculdade</h3><div class="metric">R$ 160,00</div><div class="muted">Vence dia 25 • fixa</div></div>
+          <div class="card"><h3>Faculdade</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 25 • fixa</div></div>
           <div class="card"><h3>Cartão Santander</h3><div class="metric">R$ 0,00</div><div class="muted">Vence dia 15 • variável</div></div>
           <div class="card"><h3>Parcela da moto</h3><div class="metric">R$ 0,00</div><div class="muted">Parcelada • em andamento</div></div>
           <div class="card"><h3>Cartão mãe</h3><div class="metric">R$ 0,00</div><div class="muted">Parcelada • em andamento</div></div>
@@ -159,20 +159,64 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const state = { entradas: [], saidas: [], contas: [], parcelas: [], investimentos: [], adiantamentos: [] };
 let dashboardView = 'weekly';
-const LS_KEY = 'bruno_finance_v2_state';
+const LS_KEY = 'bruno_finance_v3_state';
+const LEGACY_KEYS = ['bruno_finance_v2_state'];
 const saveLocal = () => { try { localStorage.setItem(LS_KEY, JSON.stringify({ entradas: state.entradas, saidas: state.saidas, contas: state.contas, parcelas: state.parcelas, investimentos: state.investimentos, adiantamentos: state.adiantamentos })); } catch(e) {} };
 const loadLocal = () => { try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; } };
+const clearLocalFinance = () => { try { [LS_KEY, ...LEGACY_KEYS].forEach(k => localStorage.removeItem(k)); } catch(e) {} };
 const money = v => `R$ ${Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const parseMoney = v => Number(String(v||'0').replace(/[^0-9,.-]/g,'').replace(',','.')) || 0;
 const byId = id => document.getElementById(id);
-const startOfWeek = d => { const x = new Date(d); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); x.setHours(0,0,0,0); return x; };
-const startOfMonth = d => { const x = new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; };
-const withinView = (dateStr) => {
-  const d = new Date(dateStr || new Date());
+const dateOnly = (value) => {
+  if (!value) {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  const [y,m,d] = String(value).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+const endOfDay = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setHours(23,59,59,999); return x; };
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const startOfWeek = d => { const x = startOfDay(new Date(d)); const day = (x.getDay() + 6) % 7; x.setDate(x.getDate() - day); return x; };
+const startOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+const startOfYear = d => new Date(d.getFullYear(), 0, 1);
+const getViewRange = () => {
   const now = new Date();
-  const s = dashboardView === 'monthly' ? startOfMonth(now) : startOfWeek(now);
-  const e = new Date(now); e.setHours(23,59,59,999);
-  return d >= s && d <= e;
+  const start = dashboardView === 'daily' ? startOfDay(now)
+    : dashboardView === 'monthly' ? startOfMonth(now)
+    : dashboardView === 'yearly' ? startOfYear(now)
+    : startOfWeek(now);
+  return { start, end: endOfDay(now) };
+};
+const getPeriodLabel = () => {
+  const now = new Date();
+  if (dashboardView === 'daily') return `Período: ${now.toLocaleDateString('pt-BR')}`;
+  if (dashboardView === 'monthly') return `Período: ${now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+  if (dashboardView === 'yearly') return `Período: ${now.getFullYear()}`;
+  const start = startOfWeek(now);
+  return `Período: ${start.toLocaleDateString('pt-BR')} a ${now.toLocaleDateString('pt-BR')}`;
+};
+const getPeriodShortLabel = () => {
+  if (dashboardView === 'daily') return 'Hoje';
+  if (dashboardView === 'monthly') return 'Mês';
+  if (dashboardView === 'yearly') return 'Ano';
+  return 'Semana';
+};
+const updateViewButtons = () => {
+  [['viewDaily','daily'],['viewWeekly','weekly'],['viewMonthly','monthly'],['viewYearly','yearly']].forEach(([id,view]) => {
+    const el = byId(id);
+    if (!el) return;
+    el.style.background = dashboardView === view ? 'var(--primary)' : 'var(--surface)';
+    el.style.color = dashboardView === view ? '#fff' : 'var(--text)';
+    el.style.borderColor = dashboardView === view ? 'var(--primary)' : 'var(--line)';
+  });
+  const label = byId('periodLabel');
+  if (label) label.textContent = getPeriodLabel();
+};
+const withinView = (dateStr) => {
+  const d = dateOnly(dateStr);
+  const { start, end } = getViewRange();
+  return d >= start && d <= end;
 };
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -354,7 +398,9 @@ function renderInvestimentos() {
 
 // ── render principal ─────────────────────────────────────────────────────────
 function render() {
+  updateViewButtons();
   const entradasView = state.entradas.filter(x => String(x.status).toLowerCase()==='recebido' && withinView(x.data_lancamento));
+  const entradasPendentes = state.entradas.filter(x => String(x.status).toLowerCase()==='previsto' && withinView(x.data_lancamento));
   const saidasView   = state.saidas.filter(x => String(x.observacao||'').toLowerCase()==='confirmada' && withinView(x.data_lancamento));
   const entradaTotal = entradasView.reduce((a,b)=>a+parseMoney(b.valor),0);
   const saidaTotal   = saidasView.reduce((a,b)=>a+parseMoney(b.valor),0);
@@ -362,7 +408,8 @@ function render() {
   const uber   = entradasView.filter(x=>x.origem==='Uber').reduce((a,b)=>a+parseMoney(b.valor),0);
   const d99    = entradasView.filter(x=>x.origem==='99').reduce((a,b)=>a+parseMoney(b.valor),0);
   const ifood  = entradasView.filter(x=>x.origem==='iFood').reduce((a,b)=>a+parseMoney(b.valor),0);
-  const receber = 0;
+  const receber = entradasPendentes.reduce((a,b)=>a+parseMoney(b.valor),0);
+  const totalRepasses = uber + d99 + ifood;
   [['saldoGeral',saldo],['saldoUber',uber],['saldo99',d99],['saldoIfood',ifood],['saldoReceber',receber]]
     .forEach(([id,val])=>{ const el=byId(id); if(el) el.textContent=money(val); });
 
@@ -430,13 +477,14 @@ async function reloadAll() {
     sb.from('investimentos').select('*').order('id',{ascending:false}),
     sb.from('adiantamentos').select('*').order('id',{ascending:false})
   ]);
-  const local = loadLocal();
-  state.entradas      = (local && local.entradas)      || e1.data || [];
-  state.saidas        = (local && local.saidas)        || s1.data || [];
-  state.contas        = (local && local.contas)        || c1.data || [];
-  state.parcelas      = (local && local.parcelas)      || p1.data || [];
-  state.investimentos = (local && local.investimentos) || i1.data || [];
-  state.adiantamentos = (local && local.adiantamentos) || a1.data || [];
+  const local = loadLocal() || {};
+  state.entradas      = e1.error ? (local.entradas || []) : (e1.data || []);
+  state.saidas        = s1.error ? (local.saidas || []) : (s1.data || []);
+  state.contas        = c1.error ? (local.contas || []) : (c1.data || []);
+  state.parcelas      = p1.error ? (local.parcelas || []) : (p1.data || []);
+  state.investimentos = i1.error ? (local.investimentos || []) : (i1.data || []);
+  state.adiantamentos = a1.error ? (local.adiantamentos || []) : (a1.data || []);
+  saveLocal();
   render();
 }
 
@@ -532,8 +580,10 @@ byId('btnSync').addEventListener('click', async () => {
   catch(e) { console.error(e); alert('Erro ao conectar ao Supabase.'); }
 });
 
-byId('viewWeekly').addEventListener('click', () => { dashboardView = 'weekly'; reloadAll(); });
-byId('viewMonthly').addEventListener('click', () => { dashboardView = 'monthly'; reloadAll(); });
+byId('viewDaily').addEventListener('click', async () => { dashboardView = 'daily'; await reloadAll(); });
+byId('viewWeekly').addEventListener('click', async () => { dashboardView = 'weekly'; await reloadAll(); });
+byId('viewMonthly').addEventListener('click', async () => { dashboardView = 'monthly'; await reloadAll(); });
+byId('viewYearly').addEventListener('click', async () => { dashboardView = 'yearly'; await reloadAll(); });
 byId('themeToggle').addEventListener('click', () => {
   document.documentElement.setAttribute('data-theme',
     document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
@@ -648,6 +698,34 @@ byId('btnConfirmarExcluir').addEventListener('click', async () => {
   const { error } = await sb.from('contas_fixas').delete().eq('id', Number(contaId));
   if (!error) { byId('modalExcluirConta').classList.remove('show'); await reloadAll(); saveLocal(); }
   else { console.error(error); alert('Erro ao excluir: ' + error.message); }
+});
+
+byId('btnResetAll').addEventListener('click', async () => {
+  if (!confirm('Zerar todo o sistema e começar hoje? Essa ação vai remover entradas, saídas, contas, investimentos e adiantamentos salvos.')) return;
+  try {
+    await Promise.all([
+      sb.from('adiantamentos').delete().neq('id', 0),
+      sb.from('parcelas').delete().neq('id', 0),
+      sb.from('investimentos').delete().neq('id', 0),
+      sb.from('entradas').delete().neq('id', 0),
+      sb.from('saidas').delete().neq('id', 0),
+      sb.from('contas_fixas').delete().neq('id', 0)
+    ]);
+    await sb.from('saldos_plataforma').update({ saldo: 0 }).in('plataforma', ['Uber','99','iFood','Total']);
+    state.entradas = [];
+    state.saidas = [];
+    state.contas = [];
+    state.parcelas = [];
+    state.investimentos = [];
+    state.adiantamentos = [];
+    clearLocalFinance();
+    saveLocal();
+    await reloadAll();
+    alert('Sistema zerado com sucesso.');
+  } catch (e) {
+    console.error(e);
+    alert('Erro ao zerar sistema: ' + (e.message || e));
+  }
 });
 
 reloadAll().then(saveLocal).catch(console.error);
