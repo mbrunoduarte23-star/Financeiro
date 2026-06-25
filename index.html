@@ -363,7 +363,7 @@ function render() {
         ? String(x.status).toLowerCase() === 'recebido'
         : String(x.observacao||'').toLowerCase() === 'confirmada';
       const isCancelado = isEntrada
-        ? false
+        ? String(x.observacao||'').toLowerCase() === 'cancelada'
         : String(x.observacao||'').toLowerCase() === 'cancelada';
       const label = isEntrada
         ? `<strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div>`
@@ -372,9 +372,9 @@ function render() {
         ? `<div class="pos">+ ${money(parseMoney(x.valor))}</div>`
         : `<div class="neg">- ${money(parseMoney(x.valor))}</div>`;
       const actions = isConfirmado
-        ? `<span title="Confirmado" style="font-size:18px;color:var(--pos)">✔</span>`
+        ? `<span class="pill" style="background:var(--pos);color:#fff;">Visto</span>`
         : isCancelado
-        ? `<span title="Cancelado" style="font-size:18px;color:var(--neg)">✘</span>`
+        ? `<span class="pill" style="background:var(--danger);color:#fff;">Cancelado</span>`
         : `<button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;" data-kind="${x.tipo}" data-id="${x.id}" data-action="confirmar" title="Confirmar">✔</button><button class="btn btn-secondary mov-action" style="padding:4px 10px;font-size:13px;background:var(--danger,#b91c1c);color:#fff;" data-kind="${x.tipo}" data-id="${x.id}" data-action="cancelar" title="Cancelar">✕</button>`;
       return `<div class="row"><div>${label}</div><div style="display:flex;gap:8px;align-items:center;">${actions}${valor}</div></div>`;
     }).join('') || '<div class="muted">Sem lançamentos ainda.</div>';
@@ -449,8 +449,11 @@ document.addEventListener('click', async (e) => {
   } else {
     ({ error } = await sb.from(table).delete().eq('id', id));
   }
-  if (!error) await reloadAll();
-  else { console.error(error); alert('Erro: ' + error.message); }
+  if (!error) {
+    await reloadAll();
+    const dash = document.querySelector('[data-section="dashboard"]');
+    if (dash) dash.click();
+  } else { console.error(error); alert('Erro: ' + error.message); }
 });
 
 byId('btnSync').addEventListener('click', async () => {
