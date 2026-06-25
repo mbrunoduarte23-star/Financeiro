@@ -206,16 +206,13 @@ fillDate('dataEntrada'); fillDate('dataSaida');
 // ── tipo conta → mostrar meses variáveis ─────────────────────────────────────
 byId('contaTipo').addEventListener('change', function() {
   const wrap = byId('mesesVariaveis');
-  if (this.value === 'variavel') {
-    wrap.style.display = 'block';
-    const grid = byId('gridMeses');
-    if (!grid.innerHTML) {
-      grid.innerHTML = MESES.map((m,i) =>
-        `<div class="field"><label>${m}</label><input class="mes-val" data-mes="${i+1}" placeholder="R$ 0,00"></div>`
-      ).join('');
-    }
-  } else {
-    wrap.style.display = 'none';
+  const grid = byId('gridMeses');
+  const isVar = this.value === 'variavel';
+  wrap.style.display = isVar ? 'block' : 'none';
+  if (isVar && !grid.innerHTML) {
+    grid.innerHTML = MESES.map((m,i) =>
+      `<div class="field"><label>${m}</label><input class="mes-val" data-mes="${i+1}" placeholder="R$ 0,00"></div>`
+    ).join('');
   }
 });
 
@@ -339,8 +336,13 @@ function render() {
 
   const mov = byId('movRecentes');
   if (mov) mov.innerHTML = [
-    ...state.entradas.slice(0,3).map(x=>`<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div></div><div class="pos">+ ${money(parseMoney(x.valor))}</div></div>`),
-    ...state.saidas.slice(0,3).map(x=>`<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div></div><div class="neg">- ${money(parseMoney(x.valor))}</div></div>`)
+    ...state.entradas.slice(0,3).map(x=>{
+      const isRec = String(x.status).toLowerCase()==='recebido';
+      return `<div class="row"><div><strong>Entrada ${x.origem}</strong><div class="muted">${x.status||''}</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn btn-secondary mov-action" data-kind="entrada" data-id="${x.id}" data-action="confirmar" title="Confirmar recebimento">${isRec ? '✓' : '☐'}</button><button class="btn btn-secondary mov-action" data-kind="entrada" data-id="${x.id}" data-action="cancelar" title="Cancelar recebimento">✕</button><div class="pos">+ ${money(parseMoney(x.valor))}</div></div></div>`;
+    }),
+    ...state.saidas.slice(0,3).map(x=>{
+      return `<div class="row"><div><strong>Saída ${x.categoria}</strong><div class="muted">${x.conta_vinculada||''}</div></div><div style="display:flex;gap:8px;align-items:center;"><button class="btn btn-secondary mov-action" data-kind="saida" data-id="${x.id}" data-action="confirmar" title="Confirmar saída">✓</button><button class="btn btn-secondary mov-action" data-kind="saida" data-id="${x.id}" data-action="cancelar" title="Cancelar saída">✕</button><div class="neg">- ${money(parseMoney(x.valor))}</div></div></div>`;
+    })
   ].join('') || '<div class="muted">Sem lançamentos ainda.</div>';
 
   const rep = byId('repasses');
@@ -390,6 +392,27 @@ async function saveEnter(modalId, table, payload) {
 }
 
 // ── listeners ────────────────────────────────────────────────────────────────
+
+// movimentações recentes actions
+byId('movRecentes').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.mov-action');
+  if (!btn) return;
+  const kind = btn.dataset.kind;
+  const id = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+  const table = kind === 'entrada' ? 'entradas' : 'saidas';
+  const confirmMsg = action === 'confirmar'
+    ? 'Confirmar esta movimentação?'
+    : 'Cancelar esta movimentação?';
+  if (!confirm(confirmMsg)) return;
+  const payload = kind === 'entrada'
+    ? { status: action === 'confirmar' ? 'Recebido' : 'Previsto' }
+    : { observacao: action === 'confirmar' ? 'Confirmada' : 'Cancelada' };
+  const { error } = await sb.from(table).update(payload).eq('id', id);
+  if (!error) await reloadAll();
+  else { console.error(error); alert('Erro ao atualizar movimentação: ' + error.message); }
+});
+
 byId('btnSync').addEventListener('click', async () => {
   try { await reloadAll(); alert('Conexão com Supabase OK.'); }
   catch(e) { console.error(e); alert('Erro ao conectar ao Supabase.'); }
@@ -423,12 +446,12 @@ byId('modalSaida').querySelector('.btn-primary').addEventListener('click', async
 
 // nova conta — suporte a variável com meses
 byId('btnSalvarConta2').addEventListener('click', async () => {
-  const nome  = byId('contaNome').value.trim();
-  const tipo  = byId('contaTipo').value;
+  const nome = byId('contaNome').value.trim();
+  const tipo = byId('contaTipo').value;
   const valor = byId('contaValor').value;
-  const venc  = byId('contaVenc').value;
-  const pa    = byId('contaParcelaAtual').value;
-  const tp    = byId('contaTotalParc').value;
+  const venc = byId('contaVenc').value;
+  const pa = byId('contaParcelaAtual').value;
+  const tp = byId('contaTotalParc').value;
   if (!nome) return alert('Informe o nome da conta.');
   let mesesValores = null;
   if (tipo === 'variavel') {
@@ -438,15 +461,20 @@ byId('btnSalvarConta2').addEventListener('click', async () => {
     });
     mesesValores = JSON.stringify(obj);
   }
-  await saveEnter('modalConta','contas_fixas',{
-    nome, tipo,
+  if (tipo === 'parcelada' && (!pa || !tp)) return alert('Preencha parcela atual e total de parcelas.');
+  const payload = {
+    nome,
+    tipo,
     valor_atual: parseMoney(valor),
-    vencimento_dia: Number(venc||0),
-    parcela_atual:  pa ? Number(pa) : null,
+    vencimento_dia: Number(venc || 0),
+    parcela_atual: pa ? Number(pa) : null,
     total_parcelas: tp ? Number(tp) : null,
-    meses_valores:  mesesValores,
-    status:'Aberta'
-  });
+    meses_valores: mesesValores,
+    status: 'Aberta'
+  };
+  const { error } = await sb.from('contas_fixas').insert(payload);
+  if (!error) { byId('modalConta').classList.remove('show'); await reloadAll(); }
+  else { console.error(error); alert('Erro ao salvar conta: ' + error.message); }
 });
 
 // editar conta
