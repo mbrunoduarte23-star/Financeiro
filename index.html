@@ -159,6 +159,9 @@ const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const state = { entradas: [], saidas: [], contas: [], parcelas: [], investimentos: [], adiantamentos: [] };
 let dashboardView = 'weekly';
+const LS_KEY = 'bruno_finance_v2_state';
+const saveLocal = () => { try { localStorage.setItem(LS_KEY, JSON.stringify({ entradas: state.entradas, saidas: state.saidas, contas: state.contas, parcelas: state.parcelas, investimentos: state.investimentos, adiantamentos: state.adiantamentos })); } catch(e) {} };
+const loadLocal = () => { try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch(e) { return null; } };
 const money = v => `R$ ${Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const parseMoney = v => Number(String(v||'0').replace(/[^0-9,.-]/g,'').replace(',','.')) || 0;
 const byId = id => document.getElementById(id);
@@ -427,18 +430,19 @@ async function reloadAll() {
     sb.from('investimentos').select('*').order('id',{ascending:false}),
     sb.from('adiantamentos').select('*').order('id',{ascending:false})
   ]);
-  state.entradas      = e1.data||[];
-  state.saidas        = s1.data||[];
-  state.contas        = c1.data||[];
-  state.parcelas      = p1.data||[];
-  state.investimentos = i1.data||[];
-  state.adiantamentos = a1.data||[];
+  const local = loadLocal();
+  state.entradas      = (local && local.entradas)      || e1.data || [];
+  state.saidas        = (local && local.saidas)        || s1.data || [];
+  state.contas        = (local && local.contas)        || c1.data || [];
+  state.parcelas      = (local && local.parcelas)      || p1.data || [];
+  state.investimentos = (local && local.investimentos) || i1.data || [];
+  state.adiantamentos = (local && local.adiantamentos) || a1.data || [];
   render();
 }
 
 async function saveEnter(modalId, table, payload) {
   const { error } = await sb.from(table).insert(payload);
-  if (!error) { byId(modalId).classList.remove('show'); await reloadAll(); }
+  if (!error) { byId(modalId).classList.remove('show'); await reloadAll(); saveLocal(); }
   else { console.error(error); alert('Erro ao salvar: ' + error.message); }
 }
 
@@ -507,17 +511,20 @@ document.addEventListener('click', async (e) => {
       if (isEntrada) state.entradas.splice(idx, 0, original);
       else state.saidas.splice(idx, 0, original);
     }
+    saveLocal();
     render();
     alert('Erro ao salvar no Supabase: ' + (error.message || error));
     return;
   }
 
   if (action === 'confirmar') {
+    saveLocal();
     render();
     return;
   }
 
   await reloadAll();
+  saveLocal();
 });
 
 byId('btnSync').addEventListener('click', async () => {
@@ -601,7 +608,7 @@ byId('btnSalvarConta').addEventListener('click', async () => {
   if (parcelaAtual) payload.parcela_atual  = Number(parcelaAtual);
   if (totalParc)    payload.total_parcelas = Number(totalParc);
   const { error } = await sb.from('contas_fixas').update(payload).eq('id', Number(contaId));
-  if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); }
+  if (!error) { byId('modalEditarConta').classList.remove('show'); await reloadAll(); saveLocal(); }
   else { console.error(error); alert('Erro ao atualizar: ' + error.message); }
 });
 
@@ -639,11 +646,11 @@ byId('btnConfirmarExcluir').addEventListener('click', async () => {
   const nome = byId('excluirContaNome').options[byId('excluirContaNome').selectedIndex].text;
   if (!confirm(`Tem certeza que deseja excluir "${nome}"? Essa ação não pode ser desfeita.`)) return;
   const { error } = await sb.from('contas_fixas').delete().eq('id', Number(contaId));
-  if (!error) { byId('modalExcluirConta').classList.remove('show'); await reloadAll(); }
+  if (!error) { byId('modalExcluirConta').classList.remove('show'); await reloadAll(); saveLocal(); }
   else { console.error(error); alert('Erro ao excluir: ' + error.message); }
 });
 
-reloadAll().catch(console.error);
+reloadAll().then(saveLocal).catch(console.error);
 </script>
 </body>
 </html>
